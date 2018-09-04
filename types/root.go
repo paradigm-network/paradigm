@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 )
 
-
 type Root struct {
 	X, Y   string
 	Index  int
