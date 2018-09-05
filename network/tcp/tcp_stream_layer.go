@@ -2,9 +2,9 @@ package tcp
 
 import (
 	"errors"
+	"github.com/sirupsen/logrus"
 	"net"
 	"time"
-	"github.com/sirupsen/logrus"
 )
 
 var (

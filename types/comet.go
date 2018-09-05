@@ -62,7 +62,7 @@ type Comet struct {
 	Body      CometBody
 	Signature string //creator's digital signature of body
 
-	topologicalIndex int
+	TopologicalIndex int
 
 	roundReceived      *int
 	consensusTimestamp time.Time
@@ -266,13 +266,13 @@ func (a ByTimestamp) Less(i, j int) bool {
 }
 
 // ByTopologicalOrder implements sort.Interface for []Comet based on
-// the topologicalIndex field.
+// the TopologicalIndex field.
 type ByTopologicalOrder []Comet
 
 func (a ByTopologicalOrder) Len() int      { return len(a) }
 func (a ByTopologicalOrder) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ByTopologicalOrder) Less(i, j int) bool {
-	return a[i].topologicalIndex < a[j].topologicalIndex
+	return a[i].TopologicalIndex < a[j].TopologicalIndex
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
