@@ -1,4 +1,4 @@
-package net
+package network
 
 import "io"
 
@@ -29,11 +29,6 @@ type Transport interface {
 
 	// LocalAddr is used to return our local address to distinguish from our peers.
 	LocalAddr() string
-
-	// Sync sends the appropriate RPC to the target node.
-	Sync(target string, args *SyncRequest, resp *SyncResponse) error
-
-	EagerSync(target string, args *EagerSyncRequest, resp *EagerSyncResponse) error
 
 	// Close permanently closes a transport, stopping
 	// any associated goroutines and freeing other resources.

@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	cm "github.com/paradigm-network/paradigm/common"
-	"github.com/paradigm-network/paradigm/types"
 	"github.com/paradigm-network/paradigm/errors"
+	"github.com/paradigm-network/paradigm/types"
 )
 
 type Key struct {

@@ -3,9 +3,9 @@ package storage
 import (
 	"strconv"
 
-	"github.com/paradigm-network/paradigm/types"
 	"github.com/paradigm-network/paradigm/common"
 	"github.com/paradigm-network/paradigm/errors"
+	"github.com/paradigm-network/paradigm/types"
 )
 
 type InmemStore struct {
@@ -47,7 +47,7 @@ func (s *InmemStore) Participants() (map[string]int, error) {
 	return s.participants, nil
 }
 
-func (s *InmemStore) GetEvent(key string) (types.Comet, error) {
+func (s *InmemStore) GetComet(key string) (types.Comet, error) {
 	res, ok := s.eventCache.Get(key)
 	if !ok {
 		return types.Comet{}, errors.NewStoreErr(errors.KeyNotFound, key)
@@ -56,9 +56,9 @@ func (s *InmemStore) GetEvent(key string) (types.Comet, error) {
 	return res.(types.Comet), nil
 }
 
-func (s *InmemStore) SetEvent(event types.Comet) error {
+func (s *InmemStore) SetComet(event types.Comet) error {
 	key := event.Hex()
-	_, err := s.GetEvent(key)
+	_, err := s.GetComet(key)
 	if err != nil && !errors.Is(err, errors.KeyNotFound) {
 		return err
 	}

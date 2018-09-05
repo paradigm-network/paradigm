@@ -25,4 +25,3 @@ type Store interface {
 	Reset(map[string]types.Root) error
 	Close() error
 }
-
