@@ -1,7 +1,9 @@
 package: github.com/paradigm-network/paradigm
 import:
 - package: github.com/itchyny/base58-go
-- package: golang.org/x/crypto/ripemd160
+- package: github.com/golang/crypto/ripemd160
+- package: github.com/rs/zerolog
+  version: v1.8.0
 testImport:
 - package: github.com/stretchr/testify
   subpackages:

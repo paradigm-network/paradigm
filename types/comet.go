@@ -54,8 +54,8 @@ func (e *CometBody) Hash() ([]byte, error) {
 }
 
 type EventCoordinates struct {
-	hash  string
-	index int
+	Hash  string
+	Index int
 }
 
 type Comet struct {
@@ -67,8 +67,8 @@ type Comet struct {
 	roundReceived      *int
 	consensusTimestamp time.Time
 
-	lastAncestors    []EventCoordinates //[participant fake id] => last ancestor
-	firstDescendants []EventCoordinates //[participant fake id] => first descendant
+	LastAncestors    []EventCoordinates //[participant fake id] => last ancestor
+	FirstDescendants []EventCoordinates //[participant fake id] => first descendant
 
 	creator string
 	hash    []byte
