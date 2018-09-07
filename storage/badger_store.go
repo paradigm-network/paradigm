@@ -343,7 +343,7 @@ func (s *BadgerStore) dbSetEvents(comets []types.Comet) error {
 	return tx.Commit(nil)
 }
 
-func (s *BadgerStore) dbTopologicalEvents() ([]types.Comet, error) {
+func (s *BadgerStore) DbTopologicalEvents() ([]types.Comet, error) {
 	var res []types.Comet
 	t := 0
 	err := s.db.View(func(txn *badger.Txn) error {
