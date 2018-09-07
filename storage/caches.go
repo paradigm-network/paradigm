@@ -18,14 +18,14 @@ func (k Key) ToString() string {
 }
 
 type ParentRoundInfo struct {
-	round  int
-	isRoot bool
+	Round  int
+	IsRoot bool
 }
 
 func NewBaseParentRoundInfo() ParentRoundInfo {
 	return ParentRoundInfo{
-		round:  -1,
-		isRoot: false,
+		Round:  -1,
+		IsRoot: false,
 	}
 }
 

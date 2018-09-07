@@ -20,10 +20,10 @@ type CometBody struct {
 
 	//wire
 	//It is cheaper to send ints then hashes over the wire
-	selfParentIndex      int
-	otherParentCreatorID int
-	otherParentIndex     int
-	creatorID            int
+	SelfParentIndex      int
+	OtherParentCreatorID int
+	OtherParentIndex     int
+	CreatorID            int
 }
 
 //json encoding of body only
@@ -64,8 +64,8 @@ type Comet struct {
 
 	TopologicalIndex int
 
-	roundReceived      *int
-	consensusTimestamp time.Time
+	RoundReceived      *int
+	ConsensusTimestamp time.Time
 
 	LastAncestors    []EventCoordinates //[participant fake id] => last ancestor
 	FirstDescendants []EventCoordinates //[participant fake id] => first descendant
@@ -204,20 +204,20 @@ func (e *Comet) Hex() string {
 }
 
 func (e *Comet) SetRoundReceived(rr int) {
-	if e.roundReceived == nil {
-		e.roundReceived = new(int)
+	if e.RoundReceived == nil {
+		e.RoundReceived = new(int)
 	}
-	*e.roundReceived = rr
+	*e.RoundReceived = rr
 }
 
 func (e *Comet) SetWireInfo(selfParentIndex,
-	otherParentCreatorID,
-	otherParentIndex,
-	creatorID int) {
-	e.Body.selfParentIndex = selfParentIndex
-	e.Body.otherParentCreatorID = otherParentCreatorID
-	e.Body.otherParentIndex = otherParentIndex
-	e.Body.creatorID = creatorID
+otherParentCreatorID,
+otherParentIndex,
+creatorID int) {
+	e.Body.SelfParentIndex = selfParentIndex
+	e.Body.OtherParentCreatorID = otherParentCreatorID
+	e.Body.OtherParentIndex = otherParentIndex
+	e.Body.CreatorID = creatorID
 }
 
 func (e *Comet) WireBlockSignatures() []WireBlockSignature {
@@ -237,10 +237,10 @@ func (e *Comet) ToWire() WireEvent {
 	return WireEvent{
 		Body: WireBody{
 			Transactions:         e.Body.Transactions,
-			SelfParentIndex:      e.Body.selfParentIndex,
-			OtherParentCreatorID: e.Body.otherParentCreatorID,
-			OtherParentIndex:     e.Body.otherParentIndex,
-			CreatorID:            e.Body.creatorID,
+			SelfParentIndex:      e.Body.SelfParentIndex,
+			OtherParentCreatorID: e.Body.OtherParentCreatorID,
+			OtherParentIndex:     e.Body.OtherParentIndex,
+			CreatorID:            e.Body.CreatorID,
 			Timestamp:            e.Body.Timestamp,
 			Index:                e.Body.Index,
 			BlockSignatures:      e.WireBlockSignatures(),
