@@ -10,23 +10,27 @@ import (
 	"github.com/paradigm-network/paradigm/common"
 	"github.com/paradigm-network/paradigm/types"
 	"github.com/paradigm-network/paradigm/errors"
+	"sync/atomic"
 )
 
+// CometGraph is core component of Sequentia layer.
 type CometGraph struct {
-	Participants            map[string]int   //[public key] => id
-	ReverseParticipants     map[int]string   //[id] => public key
-	Store                   storage.Store    //store of Events and Rounds
-	UndeterminedEvents      []string         //[index] => hash
+	Participants            map[string]int   //map of all node running the sequentia layer  [public key] => id
+	ReverseParticipants     map[int]string   //reverse of Participants map  [id] => public key
+	Store                   storage.Store    //storage interface of Comets and Comets Rounds
+	UndeterminedEvents      []string         //undetermined comets [index] => hash
 	UndecidedRounds         []int            //queue of Rounds which have undecided witnesses
 	LastConsensusRound      *int             //index of last round where the fame of all witnesses has been decided
 	LastBlockIndex          int              //index of last block
 	LastCommitedRoundEvents int              //number of events in round before LastConsensusRound
 	ConsensusTransactions   int              //number of consensus transactions
 	PendingLoadedEvents     int              //number of loaded events that are not yet committed
-	commitCh                chan types.Block //channel for committing Blocks
 	topologicalIndex        int              //counter used to order events in topological order
 	mostPlurality           int
 
+	commitCh                chan types.Block //channel for committing Blocks
+
+	//caches
 	ancestorCache           *common.LRU
 	selfAncestorCache       *common.LRU
 	oldestSelfAncestorCache *common.LRU
@@ -35,7 +39,14 @@ type CometGraph struct {
 	roundCache              *common.LRU
 }
 
-func NewCometGraph(participants map[string]int, store storage.Store, commitCh chan types.Block) *CometGraph {
+// Global Instance of CometGraph.
+var Instance atomic.Value
+
+// Build a new CometGraph struct.
+func BuildCometGraph(participants map[string]int, store storage.Store, commitCh chan types.Block) *CometGraph {
+	if Instance.Load().(*CometGraph) != nil {
+		return Instance.Load().(*CometGraph)
+	}
 	reverseParticipants := make(map[int]string)
 	for pk, id := range participants {
 		reverseParticipants[id] = pk
@@ -57,7 +68,7 @@ func NewCometGraph(participants map[string]int, store storage.Store, commitCh ch
 		UndecidedRounds:         []int{0}, //initialize,
 		LastBlockIndex:          -1,
 	}
-
+	Instance.Store(cometGraph)
 	return &cometGraph
 }
 
@@ -75,6 +86,7 @@ func (cg *CometGraph) AncestorOf(x, y string) bool {
 	return a
 }
 
+//true if y is an ancestor of x
 func (cg *CometGraph) ancestor(x, y string) bool {
 	if x == y {
 		return true
@@ -106,6 +118,7 @@ func (cg *CometGraph) SelfAncestor(x, y string) bool {
 	return a
 }
 
+//true if y is a self-ancestor of x
 func (cg *CometGraph) selfAncestor(x, y string) bool {
 	if x == y {
 		return true
@@ -130,7 +143,7 @@ func (cg *CometGraph) See(x, y string) bool {
 	return cg.AncestorOf(x, y)
 	//it is not necessary to detect forks because we assume that with our
 	//implementations, no two events can be added by the same creator at the
-	//same height (cf InsertEvent)
+	//same height (cf InsertComet)
 }
 
 //oldest self-ancestor of x to see y
@@ -349,7 +362,8 @@ func (cg *CometGraph) RoundDiff(x, y string) (int, error) {
 	return xRound - yRound, nil
 }
 
-func (cg *CometGraph) InsertEvent(comet types.Comet, setWireInfo bool) error {
+//insert comet into db, with comet check and wireInfo if setWireInfo is true.
+func (cg *CometGraph) InsertComet(comet types.Comet, setWireInfo bool) error {
 	//verify signature
 	if ok, err := comet.Verify(); !ok {
 		if err != nil {
@@ -444,7 +458,7 @@ func (cg *CometGraph) recordBlockSignatures(blockSignatures []types.BlockSignatu
 	}
 }
 
-//Check the SelfParent is the Creator's last known Event
+//Check the SelfParent is the Creator's last known comet.
 func (cg *CometGraph) CheckSelfParent(comet types.Comet) error {
 	selfParent := comet.SelfParent()
 	creator := comet.Creator()
@@ -542,7 +556,7 @@ func (cg *CometGraph) InitEventCoordinates(comet *types.Comet) error {
 	return nil
 }
 
-//update first decendant of each last ancestor to point to event
+//update first decendant of each last ancestor to point to comet
 func (cg *CometGraph) UpdateAncestorFirstDescendant(comet types.Comet) error {
 	creatorID, ok := cg.Participants[comet.Creator()]
 	if !ok {
@@ -1080,7 +1094,7 @@ func (cg *CometGraph) Bootstrap() error {
 
 		//Insert the Comets in the Sequentia
 		for _, e := range topologicalEvents {
-			if err := cg.InsertEvent(e, true); err != nil {
+			if err := cg.InsertComet(e, true); err != nil {
 				return err
 			}
 		}
