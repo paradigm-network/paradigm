@@ -2,7 +2,10 @@
 package accounts
 
 import (
-	"github.com/paradigm/common"
+	"math/big"
+	"paradigm/common"
+	"paradigm/core/types"
+	"paradigm/event"
 )
 
 // Backend is a "wallet provider" that may contain a batch of accounts they can
@@ -39,12 +42,23 @@ type Wallet interface {
 	// Contains returns whether an account is part of this particular wallet or not.
 	Contains(account Account) bool
 
+	// Derive attempts to explicitly derive a hierarchical deterministic account at
+	// the specified derivation path.
+	Derive(path DerivationPath, pin bool) (Account, error)
+
 	// SignHash requests the wallet to sign the given hash.
 	SignHash(account Account, hash []byte) ([]byte, error)
+
+	// SignTx requests the wallet to sign the given transaction.
+	SignTx(account Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
 
 	// SignHashWithPassphrase requests the wallet to sign the given hash with the
 	// given passphrase as extra authentication information.
 	SignHashWithPassphrase(account Account, passphrase string, hash []byte) ([]byte, error)
+
+	// SignTxWithPassphrase requests the wallet to sign the given transaction, with the
+	// given passphrase as extra authentication information.
+	SignTxWithPassphrase(account Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
 }
 
 // Account represents an Paradigm account located at a specific location defined
@@ -63,3 +77,15 @@ type WalletEvent struct {
 
 // WalletEventType represents the different event types.
 type WalletEventType int
+
+//preset wallet event types for event
+const (
+	WalletArrived WalletEventType = iota
+
+	// WalletOpened is fired when a wallet is successfully opened with the purpose
+	// of starting any background processes such as automatic key derivation.
+	WalletOpened
+
+	// WalletDropped
+	WalletDropped
+)
