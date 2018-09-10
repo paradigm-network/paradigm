@@ -21,9 +21,6 @@ type Manager struct {
 	lock sync.RWMutex
 }
 
-
-
-
 // NewManager creates a generic account manager to sign transaction via various
 // supported backends.
 func NewManager(backends ...Backend) *Manager {
@@ -56,8 +53,6 @@ func NewManager(backends ...Backend) *Manager {
 	return am
 }
 
-
-
 // merge is a sorted analogue of append for wallets, where the ordering of the
 // origin list is preserved by inserting new wallets at the correct position.
 func merge(slice []Wallet, wallets ...Wallet) []Wallet {
@@ -71,9 +66,6 @@ func merge(slice []Wallet, wallets ...Wallet) []Wallet {
 	}
 	return slice
 }
-
-
-
 
 // update is the wallet event loop listening for notifications from the backends
 // and updating the cache of wallets.
@@ -113,9 +105,6 @@ func (am *Manager) update() {
 	}
 }
 
-
-
-
 // drop is the couterpart of merge, which looks up wallets from within the sorted
 // cache and removes the ones specified.
 func drop(slice []Wallet, wallets ...Wallet) []Wallet {
@@ -130,18 +119,12 @@ func drop(slice []Wallet, wallets ...Wallet) []Wallet {
 	return slice
 }
 
-
-
-
 // Close terminates the account manager's internal notification processes.
 func (am *Manager) Close() error {
 	errc := make(chan error)
 	am.quit <- errc
 	return <-errc
 }
-
-
-
 
 // Backends retrieves the backend(s) with the given type from the account manager.
 func (am *Manager) Backends(kind reflect.Type) []Backend {
@@ -187,7 +170,6 @@ func (am *Manager) Find(account Account) (Wallet, error) {
 	}
 	return nil, ErrUnknownAccount
 }
-
 
 // Subscribe creates an async subscription to receive notifications when the
 // manager detects the arrival or departure of a wallet from any of its backends.

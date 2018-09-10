@@ -10,7 +10,6 @@ type URL struct {
 	Path   string // Path for the backend to identify a unique entity
 }
 
-
 // Cmp compares x and y and returns:
 //
 //   -1 if x <  y
@@ -23,8 +22,6 @@ func (u URL) Cmp(url URL) int {
 	}
 	return strings.Compare(u.Scheme, url.Scheme)
 }
-
-
 
 // parseURL converts a user supplied URL into the accounts specific structure.
 func parseURL(url string) (URL, error) {

@@ -78,7 +78,6 @@ type WalletEvent struct {
 // WalletEventType represents the different event types.
 type WalletEventType int
 
-
 //preset wallet event types for event
 const (
 	WalletArrived WalletEventType = iota
@@ -90,6 +89,3 @@ const (
 	// WalletDropped
 	WalletDropped
 )
-
-
-
