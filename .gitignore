@@ -5,9 +5,6 @@ TODO.md
 # RTD/Sphinx
 docs/_build
 
-# glide
-vendor/
-
 # Build artifacts
 build/
 dist/

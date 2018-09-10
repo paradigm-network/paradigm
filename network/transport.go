@@ -1,6 +1,9 @@
 package network
 
-import "io"
+import (
+	"io"
+	"github.com/paradigm-network/paradigm/types"
+)
 
 // RPCResponse captures both a response and a potential error.
 type RPCResponse struct {
@@ -20,6 +23,33 @@ func (r *RPC) Respond(resp interface{}, err error) {
 	r.RespChan <- RPCResponse{resp, err}
 }
 
+
+type SyncRequest struct {
+	FromID int
+	Known  map[int]int
+}
+
+type SyncResponse struct {
+	FromID    int
+	SyncLimit bool
+	Events    []types.WireEvent
+	Known     map[int]int
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+type EagerSyncRequest struct {
+	FromID int
+	Events []types.WireEvent
+}
+
+type EagerSyncResponse struct {
+	FromID  int
+	Success bool
+}
+
+
+
 // Transport provides an interface for network transports
 // to allow a node to communicate with other nodes.
 type Transport interface {
@@ -33,6 +63,11 @@ type Transport interface {
 	// Close permanently closes a transport, stopping
 	// any associated goroutines and freeing other resources.
 	Close() error
+
+	// Sync sends the appropriate RPC to the target node.
+	Sync(target string, args *SyncRequest, resp *SyncResponse) error
+
+	EagerSync(target string, args *EagerSyncRequest, resp *EagerSyncResponse) error
 }
 
 // WithPeers is an interface that a transport may provide which allows for connection and
