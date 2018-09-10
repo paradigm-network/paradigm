@@ -1,16 +1,16 @@
-package node
+package core
 
 import (
 	"sync"
 	"sync/atomic"
 )
 
-// NodeState captures the state of a Babble node: Babbling, CatchingUp or Shutdown
+// NodeState captures the state of a Paradigm node: Booting, CatchingUp or Shutdown
 type NodeState uint32
 
 const (
-	// Babbling is the initial state of a Babble node.
-	Babbling NodeState = iota
+	// Booting is the initial state of a Paradigm node.
+	Booting NodeState = iota
 
 	CatchingUp
 
@@ -19,8 +19,8 @@ const (
 
 func (s NodeState) String() string {
 	switch s {
-	case Babbling:
-		return "Babbling"
+	case Booting:
+		return "Booting"
 	case CatchingUp:
 		return "CatchingUp"
 	case Shutdown:
@@ -34,10 +34,6 @@ type nodeState struct {
 	state    NodeState
 	starting int32
 	wg       sync.WaitGroup
-}
-
-func setRecording(shoudRecord bool) {
-
 }
 
 func (b *nodeState) getState() NodeState {

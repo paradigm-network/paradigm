@@ -1,13 +1,8 @@
 package proxy
 
-import "github.com/mosaicnetworks/babble/hashgraph"
+import "github.com/paradigm-network/paradigm/types"
 
 type AppProxy interface {
 	SubmitCh() chan []byte
-	CommitBlock(block hashgraph.Block) ([]byte, error)
-}
-
-type BabbleProxy interface {
-	CommitCh() chan hashgraph.Block
-	SubmitTx(tx []byte) error
+	CommitBlock(block types.Block) ([]byte, error)
 }

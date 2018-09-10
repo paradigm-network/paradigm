@@ -1,28 +1,28 @@
-package node
+package timer
 
 import (
 	"math/rand"
 	"time"
 )
 
-type timerFactory func() <-chan time.Time
+type TimerFactory func() <-chan time.Time
 
 type ControlTimer struct {
-	timerFactory timerFactory
-	tickCh       chan struct{} //sends a signal to listening process
-	resetCh      chan struct{} //receives instruction to reset the heartbeatTimer
-	stopCh       chan struct{} //receives instruction to stop the heartbeatTimer
-	shutdownCh   chan struct{} //receives instruction to exit Run loop
-	set          bool
+	TimerFactory TimerFactory
+	TickCh       chan struct{} //sends a signal to listening process
+	ResetCh      chan struct{} //receives instruction to reset the heartbeatTimer
+	StopCh       chan struct{} //receives instruction to stop the heartbeatTimer
+	ShutdownCh   chan struct{} //receives instruction to exit Run loop
+	Set          bool
 }
 
-func NewControlTimer(timerFactory timerFactory) *ControlTimer {
+func NewControlTimer(timerFactory TimerFactory) *ControlTimer {
 	return &ControlTimer{
-		timerFactory: timerFactory,
-		tickCh:       make(chan struct{}),
-		resetCh:      make(chan struct{}),
-		stopCh:       make(chan struct{}),
-		shutdownCh:   make(chan struct{}),
+		TimerFactory: timerFactory,
+		TickCh:       make(chan struct{}),
+		ResetCh:      make(chan struct{}),
+		StopCh:       make(chan struct{}),
+		ShutdownCh:   make(chan struct{}),
 	}
 }
 
@@ -42,28 +42,28 @@ func NewRandomControlTimer(base time.Duration) *ControlTimer {
 func (c *ControlTimer) Run() {
 
 	setTimer := func() <-chan time.Time {
-		c.set = true
-		return c.timerFactory()
+		c.Set = true
+		return c.TimerFactory()
 	}
 
 	timer := setTimer()
 	for {
 		select {
 		case <-timer:
-			c.tickCh <- struct{}{}
-			c.set = false
-		case <-c.resetCh:
+			c.TickCh <- struct{}{}
+			c.Set = false
+		case <-c.ResetCh:
 			timer = setTimer()
-		case <-c.stopCh:
+		case <-c.StopCh:
 			timer = nil
-			c.set = false
-		case <-c.shutdownCh:
-			c.set = false
+			c.Set = false
+		case <-c.ShutdownCh:
+			c.Set = false
 			return
 		}
 	}
 }
 
 func (c *ControlTimer) Shutdown() {
-	close(c.shutdownCh)
+	close(c.ShutdownCh)
 }
