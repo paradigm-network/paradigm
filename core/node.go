@@ -55,7 +55,7 @@ func NewNode(conf *Config,
 	participants []peer.Peer,
 	store storage.Store,
 	trans network.Transport,
-//proxy proxy.AppProxy
+	proxy proxy.AppProxy,
 ) *Node {
 
 	localAddr := trans.LocalAddr()
@@ -75,9 +75,9 @@ func NewNode(conf *Config,
 		logger:       conf.Logger.WithField("this_id", id),
 		peerSelector: peerSelector,
 		trans:        trans,
-		//netCh:        trans.Consumer(),
-		//proxy:        proxy,
-		//submitCh:     proxy.SubmitCh(),
+		netCh:        trans.Consumer(),
+		proxy:        proxy,
+		submitCh:     proxy.SubmitCh(),
 		commitCh:     commitCh,
 		shutdownCh:   make(chan struct{}),
 		controlTimer: timer.NewRandomControlTimer(conf.HeartbeatTimeout),

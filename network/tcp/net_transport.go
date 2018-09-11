@@ -144,6 +144,18 @@ func (n *NetworkTransport) IsShutdown() bool {
 	}
 }
 
+
+// Sync implements the Transport interface.
+func (n *NetworkTransport) Sync(target string, args *network.SyncRequest, resp *network.SyncResponse) error {
+	return n.genericRPC(target, rpcSync, args, resp)
+}
+
+// EagerSync implements the Transport interface.
+func (n *NetworkTransport) EagerSync(target string, args *network.EagerSyncRequest, resp *network.EagerSyncResponse) error {
+	return n.genericRPC(target, rpcEagerSync, args, resp)
+}
+
+
 // getPooledConn is used to grab a pooled connection.
 func (n *NetworkTransport) getPooledConn(target string) *netConn {
 	n.connPoolLock.Lock()

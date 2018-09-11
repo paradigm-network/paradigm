@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	jsonPeerPath = "peers.json"
+	jsonPeerPath = "participants.json"
 )
 
 type Peer struct {
