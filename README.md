@@ -34,19 +34,13 @@ Fetch the dependent third party packages with glide.
 
 ```
 $ cd $GOPATH/src/github.com/paradigm-network/paradigm
-$ make get_vendor_deps
+$ make vendor
 $ make install
-```
-
-Build the source code with make.
-
-```
-$ make all
 ```
 
 After building the source code sucessfully, you should see two executable programs:
 
-- `paradigm`: the node program/command line program for paradigm node control
+- `paradigm`: the node build/paradigm line program for paradigm node control
 
 ### get from release
 You can download at [release page](https://github.com/paradigm-network/paradigm/releases).
