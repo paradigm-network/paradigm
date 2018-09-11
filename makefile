@@ -16,10 +16,6 @@ build:
 		--ldflags "-X github.com/paradigm-network/paradigm/version.GitCommit=`git rev-parse HEAD`" \
 		-o build/paradigm ./cmd/paradigm/
 
-# dist builds binaries for all platforms and packages them for distribution
-dist:
-	@BUILD_TAGS='$(BUILD_TAGS)' sh -c "'$(CURDIR)/scripts/dist.sh'"
-
 test:
 	glide novendor | xargs go test
 
