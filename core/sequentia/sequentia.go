@@ -11,24 +11,25 @@ import (
 	"github.com/paradigm-network/paradigm/types"
 	"github.com/paradigm-network/paradigm/errors"
 	"sync/atomic"
+	"github.com/sirupsen/logrus"
 )
 
 // CometGraph is core component of Sequentia layer.
 type CometGraph struct {
-	Participants            map[string]int   //map of all node running the sequentia layer  [public key] => id
-	ReverseParticipants     map[int]string   //reverse of Participants map  [id] => public key
-	Store                   storage.Store    //storage interface of Comets and Comets Rounds
-	UndeterminedEvents      []string         //undetermined comets [index] => hash
-	UndecidedRounds         []int            //queue of Rounds which have undecided witnesses
-	LastConsensusRound      *int             //index of last round where the fame of all witnesses has been decided
-	LastBlockIndex          int              //index of last block
-	LastCommitedRoundEvents int              //number of events in round before LastConsensusRound
-	ConsensusTransactions   int              //number of consensus transactions
-	PendingLoadedEvents     int              //number of loaded events that are not yet committed
-	topologicalIndex        int              //counter used to order events in topological order
+	Participants            map[string]int //map of all node running the sequentia layer  [public key] => id
+	ReverseParticipants     map[int]string //reverse of Participants map  [id] => public key
+	Store                   storage.Store  //storage interface of Comets and Comets Rounds
+	UndeterminedEvents      []string       //undetermined comets [index] => hash
+	UndecidedRounds         []int          //queue of Rounds which have undecided witnesses
+	LastConsensusRound      *int           //index of last round where the fame of all witnesses has been decided
+	LastBlockIndex          int            //index of last block
+	LastCommitedRoundEvents int            //number of events in round before LastConsensusRound
+	ConsensusTransactions   int            //number of consensus transactions
+	PendingLoadedEvents     int            //number of loaded events that are not yet committed
+	topologicalIndex        int            //counter used to order events in topological order
 	mostPlurality           int
 
-	commitCh                chan types.Block //channel for committing Blocks
+	commitCh chan types.Block //channel for committing Blocks
 
 	//caches
 	ancestorCache           *common.LRU
@@ -37,13 +38,15 @@ type CometGraph struct {
 	stronglySeeCache        *common.LRU
 	parentRoundCache        *common.LRU
 	roundCache              *common.LRU
+
+	logger *logrus.Logger
 }
 
 // Global Instance of CometGraph.
 var Instance atomic.Value
 
 // Build a new CometGraph struct.
-func BuildCometGraph(participants map[string]int, store storage.Store, commitCh chan types.Block) *CometGraph {
+func BuildCometGraph(participants map[string]int, store storage.Store, commitCh chan types.Block, logger *logrus.Logger) *CometGraph {
 	if Instance.Load() != nil {
 		return Instance.Load().(*CometGraph)
 	}
@@ -67,6 +70,7 @@ func BuildCometGraph(participants map[string]int, store storage.Store, commitCh 
 		mostPlurality:           2*len(participants)/3 + 1,
 		UndecidedRounds:         []int{0}, //initialize,
 		LastBlockIndex:          -1,
+		logger:                  logger,
 	}
 	Instance.Store(cometGraph)
 	return &cometGraph
@@ -364,6 +368,10 @@ func (cg *CometGraph) RoundDiff(x, y string) (int, error) {
 
 //insert comet into db, with comet check and wireInfo if setWireInfo is true.
 func (cg *CometGraph) InsertComet(comet types.Comet, setWireInfo bool) error {
+	cg.logger.WithFields(logrus.Fields{
+		"Creator":   comet.Creator(),
+		"Signature": comet.Signature,
+	}).Info("InsertComet")
 	//verify signature
 	if ok, err := comet.Verify(); !ok {
 		if err != nil {
@@ -417,43 +425,43 @@ func (cg *CometGraph) recordBlockSignatures(blockSignatures []types.BlockSignatu
 		//check if validator belongs to list of participants
 		validatorHex := fmt.Sprintf("0x%X", bs.Validator)
 		if _, ok := cg.Participants[validatorHex]; !ok {
-			//cg.logger.WithFields(logrus.Fields{
-			//	"index":     bs.Index,
-			//	"validator": validatorHex,
-			//}).Warning("Verifying Block signature. Unknown validator")
+			cg.logger.WithFields(logrus.Fields{
+				"index":     bs.Index,
+				"validator": validatorHex,
+			}).Warning("Verifying Block signature. Unknown validator")
 			continue
 		}
 
 		block, err := cg.Store.GetBlock(bs.Index)
 		if err != nil {
-			//h.logger.WithFields(logrus.Fields{
-			//	"index": bs.Index,
-			//	"msg":   err,
-			//}).Warning("Verifying Block signature. Could not fetch Block")
+			cg.logger.WithFields(logrus.Fields{
+				"index": bs.Index,
+				"msg":   err,
+			}).Warning("Verifying Block signature. Could not fetch Block")
 			continue
 		}
 		valid, err := block.Verify(bs)
 		if err != nil {
-			//h.logger.WithFields(logrus.Fields{
-			//	"index": bs.Index,
-			//	"msg":   err,
-			//}).Warning("Verifying Block signature")
+			cg.logger.WithFields(logrus.Fields{
+				"index": bs.Index,
+				"msg":   err,
+			}).Warning("Verifying Block signature")
 			continue
 		}
 		if !valid {
-			//h.logger.WithFields(logrus.Fields{
-			//	"index": bs.Index,
-			//}).Warning("Verifying Block signature. Invalid signature")
+			cg.logger.WithFields(logrus.Fields{
+				"index": bs.Index,
+			}).Warning("Verifying Block signature. Invalid signature")
 			continue
 		}
 
 		block.SetSignature(bs)
 
 		if err := cg.Store.SetBlock(block); err != nil {
-			//h.logger.WithFields(logrus.Fields{
-			//	"index": bs.Index,
-			//	"msg":   err,
-			//}).Warning("Saving Block")
+			cg.logger.WithFields(logrus.Fields{
+				"index": bs.Index,
+				"msg":   err,
+			}).Warning("Saving Block")
 		}
 	}
 }

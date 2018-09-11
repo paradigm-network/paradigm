@@ -51,7 +51,7 @@ func NewCore(
 	core := Core{
 		id:                  id,
 		key:                 key,
-		cg:                  sequentia.BuildCometGraph(participants, store, commitCh),
+		cg:                  sequentia.BuildCometGraph(participants, store, commitCh,logger),
 		participants:        participants,
 		reverseParticipants: reverseParticipants,
 		transactionPool:     [][]byte{},

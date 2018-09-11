@@ -170,6 +170,7 @@ func printVersion(c *cli.Context) error {
 
 func run(c *cli.Context) error {
 	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
 	onlyAccretion := c.Bool(OnlyAccretion.Name)
 	datadir := c.String(DataDirFlag.Name)
 	addr := c.String(NodeAddressFlag.Name)

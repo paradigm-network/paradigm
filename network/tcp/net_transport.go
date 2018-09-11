@@ -347,6 +347,18 @@ func (n *NetworkTransport) handleCommand(r *bufio.Reader, dec *json.Decoder, enc
 
 	// Decode the command
 	switch rpcType {
+	case rpcSync:
+		var req network.SyncRequest
+		if err := dec.Decode(&req); err != nil {
+			return err
+		}
+		rpc.Command = &req
+	case rpcEagerSync:
+		var req network.EagerSyncRequest
+		if err := dec.Decode(&req); err != nil {
+			return err
+		}
+		rpc.Command = &req
 	default:
 		return fmt.Errorf("unknown rpc type %d", rpcType)
 	}
