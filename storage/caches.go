@@ -13,6 +13,10 @@ type Key struct {
 	y string
 }
 
+func NewKey(x,y string) Key{
+	return Key{x,y}
+}
+
 func (k Key) ToString() string {
 	return fmt.Sprintf("{%s, %s}", k.x, k.y)
 }

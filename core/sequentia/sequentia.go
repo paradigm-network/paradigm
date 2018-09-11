@@ -44,7 +44,7 @@ var Instance atomic.Value
 
 // Build a new CometGraph struct.
 func BuildCometGraph(participants map[string]int, store storage.Store, commitCh chan types.Block) *CometGraph {
-	if Instance.Load().(*CometGraph) != nil {
+	if Instance.Load() != nil {
 		return Instance.Load().(*CometGraph)
 	}
 	reverseParticipants := make(map[int]string)
@@ -77,12 +77,12 @@ func (cg *CometGraph) MostPlurality() int {
 }
 
 //true if y is an ancestor of x
-func (cg *CometGraph) AncestorOf(x, y string) bool {
-	if c, ok := cg.ancestorCache.Get(storage.Key{x, y}); ok {
+func (cg *CometGraph) AncestorOf(cx, cy string) bool {
+	if c, ok := cg.ancestorCache.Get(storage.NewKey(cx, cy)); ok {
 		return c.(bool)
 	}
-	a := cg.ancestor(x, y)
-	cg.ancestorCache.Add(storage.Key{x, y}, a)
+	a := cg.ancestor(cx, cy)
+	cg.ancestorCache.Add(storage.NewKey(cx, cy), a)
 	return a
 }
 
@@ -110,11 +110,11 @@ func (cg *CometGraph) ancestor(x, y string) bool {
 
 //true if y is a self-ancestor of x
 func (cg *CometGraph) SelfAncestor(x, y string) bool {
-	if c, ok := cg.selfAncestorCache.Get(storage.Key{x, y}); ok {
+	if c, ok := cg.selfAncestorCache.Get(storage.NewKey(x, y)); ok {
 		return c.(bool)
 	}
 	a := cg.selfAncestor(x, y)
-	cg.selfAncestorCache.Add(storage.Key{x, y}, a)
+	cg.selfAncestorCache.Add(storage.NewKey(x, y), a)
 	return a
 }
 
@@ -148,11 +148,11 @@ func (cg *CometGraph) See(x, y string) bool {
 
 //oldest self-ancestor of x to see y
 func (cg *CometGraph) OldestSelfAncestorToSee(x, y string) string {
-	if c, ok := cg.oldestSelfAncestorCache.Get(storage.Key{x, y}); ok {
+	if c, ok := cg.oldestSelfAncestorCache.Get(storage.NewKey(x, y)); ok {
 		return c.(string)
 	}
 	res := cg.oldestSelfAncestorToSee(x, y)
-	cg.oldestSelfAncestorCache.Add(storage.Key{x, y}, res)
+	cg.oldestSelfAncestorCache.Add(storage.NewKey(x, y), res)
 	return res
 }
 
@@ -177,11 +177,11 @@ func (cg *CometGraph) oldestSelfAncestorToSee(x, y string) string {
 
 //true if x strongly sees y
 func (cg *CometGraph) StronglySee(x, y string) bool {
-	if c, ok := cg.stronglySeeCache.Get(storage.Key{x, y}); ok {
+	if c, ok := cg.stronglySeeCache.Get(storage.NewKey(x, y)); ok {
 		return c.(bool)
 	}
 	ss := cg.stronglySee(x, y)
-	cg.stronglySeeCache.Add(storage.Key{x, y}, ss)
+	cg.stronglySeeCache.Add(storage.NewKey(x, y), ss)
 	return ss
 }
 

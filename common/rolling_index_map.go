@@ -1,6 +1,9 @@
 package common
 
-import "strconv"
+import (
+	"strconv"
+	"github.com/paradigm-network/paradigm/errors"
+)
 
 type RollingIndexMap struct {
 	size    int
@@ -24,7 +27,7 @@ func NewRollingIndexMap(size int, keys []int) *RollingIndexMap {
 func (rim *RollingIndexMap) Get(key int, skipIndex int) ([]interface{}, error) {
 	items, ok := rim.mapping[key]
 	if !ok {
-		return nil, NewStoreErr(KeyNotFound, strconv.Itoa(key))
+		return nil, errors.NewStoreErr(errors.KeyNotFound, strconv.Itoa(key))
 	}
 
 	cached, err := items.Get(skipIndex)
@@ -42,7 +45,7 @@ func (rim *RollingIndexMap) GetItem(key int, index int) (interface{}, error) {
 func (rim *RollingIndexMap) GetLast(key int) (interface{}, error) {
 	pe, ok := rim.mapping[key]
 	if !ok {
-		return nil, NewStoreErr(KeyNotFound, strconv.Itoa(key))
+		return nil, errors.NewStoreErr(errors.KeyNotFound, strconv.Itoa(key))
 	}
 	cached, _ := pe.GetLastWindow()
 	if len(cached) == 0 {
