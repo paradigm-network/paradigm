@@ -7,9 +7,16 @@ import (
 	"os"
 	"path/filepath"
 	"io/ioutil"
+	"io"
+	"paradigm/crypto"
+	"time"
+	"encoding/hex"
+	"fmt"
 )
 
-const ()
+const (
+	version = 3
+)
 
 //keystore provides 3 methods
 type keyStore interface {
@@ -78,4 +85,40 @@ func writeKeyFile(file string, content []byte) error {
 	}
 	f.Close()
 	return os.Rename(f.Name(), file)
+}
+
+func newKey(rand io.Reader) (*Key, error) {
+	privateKeyECDSA, err := ecdsa.GenerateKey(crypto.S256(), rand)
+	if err != nil {
+		return nil, err
+	}
+	return newKeyFromECDSA(privateKeyECDSA), nil
+}
+
+func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
+	id := uuid.NewRandom()
+	key := &Key{
+		Id:         id,
+		Address:    crypto.PubkeyToAddress(privateKeyECDSA.PublicKey),
+		PrivateKey: privateKeyECDSA,
+	}
+	return key
+}
+
+// keyFileName implements the naming convention for keyfiles:
+// UTC--<created_at UTC ISO8601>-<address hex>
+func keyFileName(keyAddr common.Address) string {
+	ts := time.Now().UTC()
+	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(keyAddr[:]))
+}
+
+func toISO8601(t time.Time) string {
+	var tz string
+	name, offset := t.Zone()
+	if name == "UTC" {
+		tz = "Z"
+	} else {
+		tz = fmt.Sprintf("%03d00", offset/3600)
+	}
+	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d.%09d%s", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz)
 }

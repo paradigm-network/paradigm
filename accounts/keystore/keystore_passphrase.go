@@ -14,6 +14,11 @@ import (
 	"paradigm/common/math"
 	"paradigm/crypto/randentropy"
 	"paradigm/crypto"
+	"golang.org/x/crypto/pbkdf2"
+	"crypto/sha256"
+	crand "crypto/rand"
+	"paradigm/accounts"
+	"io"
 )
 
 const (
@@ -153,6 +158,19 @@ func StoreKey(dir, auth string, scryptN, scryptP int) (common.Address, error) {
 	return a.Address, err
 }
 
+func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
+	key, err := newKey(rand)
+	if err != nil {
+		return nil, accounts.Account{}, err
+	}
+	a := accounts.Account{Address: key.Address, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}}
+	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
+		zeroKey(key.PrivateKey)
+		return nil, a, err
+	}
+	return key, a, err
+}
+
 func decryptKeyV1(keyProtected *encryptedKeyJSONV1, auth string) (keyBytes []byte, keyId []byte, err error) {
 	keyId = uuid.Parse(keyProtected.Id)
 	mac, err := hex.DecodeString(keyProtected.Crypto.MAC)
@@ -227,4 +245,42 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 		return nil, nil, err
 	}
 	return plainText, keyId, err
+}
+
+func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
+	authArray := []byte(auth)
+	salt, err := hex.DecodeString(cryptoJSON.KDFParams["salt"].(string))
+	if err != nil {
+		return nil, err
+	}
+	dkLen := ensureInt(cryptoJSON.KDFParams["dklen"])
+
+	if cryptoJSON.KDF == keyHeaderKDF {
+		n := ensureInt(cryptoJSON.KDFParams["n"])
+		r := ensureInt(cryptoJSON.KDFParams["r"])
+		p := ensureInt(cryptoJSON.KDFParams["p"])
+		return scrypt.Key(authArray, salt, n, r, p, dkLen)
+
+	} else if cryptoJSON.KDF == "pbkdf2" {
+		c := ensureInt(cryptoJSON.KDFParams["c"])
+		prf := cryptoJSON.KDFParams["prf"].(string)
+		if prf != "hmac-sha256" {
+			return nil, fmt.Errorf("Unsupported PBKDF2 PRF: %s", prf)
+		}
+		key := pbkdf2.Key(authArray, salt, c, dkLen, sha256.New)
+		return key, nil
+	}
+
+	return nil, fmt.Errorf("Unsupported KDF: %s", cryptoJSON.KDF)
+}
+
+// TODO: can we do without this when unmarshalling dynamic JSON?
+// why do integers in KDF params end up as float64 and not int after
+// unmarshal?
+func ensureInt(x interface{}) int {
+	res, ok := x.(int)
+	if !ok {
+		res = int(x.(float64))
+	}
+	return res
 }
