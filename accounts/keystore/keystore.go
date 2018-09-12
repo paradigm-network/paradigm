@@ -3,8 +3,9 @@ package keystore
 import (
 	"paradigm/common"
 	"paradigm/accounts"
-	"pigm/event"
+	"paradigm/event"
 	"sync"
+	"path/filepath"
 )
 
 // KeyStore manages a key storage directory on disk.
@@ -25,4 +26,13 @@ type KeyStore struct {
 type unlocked struct {
 	*Key
 	abort chan struct{}
+}
+
+//node包 -- config.go -- makeaccountmanager()
+// NewKeyStore creates a keystore for the given directory.
+func NewKeyStore(keydir string, scryptN, scryptP int) *KeyStore {
+	keydir, _ = filepath.Abs(keydir)
+	ks := &KeyStore{storage: &keyStorePassphrase{keydir, scryptN, scryptP}}
+	ks.init(keydir)
+	return ks
 }
