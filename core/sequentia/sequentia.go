@@ -368,9 +368,12 @@ func (cg *CometGraph) RoundDiff(x, y string) (int, error) {
 
 //insert comet into db, with comet check and wireInfo if setWireInfo is true.
 func (cg *CometGraph) InsertComet(comet types.Comet, setWireInfo bool) error {
+	b,_:=comet.Body.Marshal()
 	cg.logger.WithFields(logrus.Fields{
 		"Creator":   comet.Creator(),
+		"Marshal":   string(b),
 		"Signature": comet.Signature,
+		"CreatorID":comet.Body.CreatorID,
 	}).Info("InsertComet")
 	//verify signature
 	if ok, err := comet.Verify(); !ok {
@@ -650,7 +653,7 @@ func (cg *CometGraph) ReadWireInfo(wevent types.WireEvent) (*types.Comet, error)
 		}
 	}
 	if wevent.Body.OtherParentIndex >= 0 {
-		otherParentCreator := cg.ReverseParticipants[wevent.Body.OtherParentCreatorID]
+		otherParentCreator :=cg.ReverseParticipants[wevent.Body.OtherParentCreatorID]
 		otherParent, err = cg.Store.ParticipantEvent(otherParentCreator, wevent.Body.OtherParentIndex)
 		if err != nil {
 			return nil, err

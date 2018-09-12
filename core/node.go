@@ -356,6 +356,10 @@ func (n *Node) pull(peerAddr string) (syncLimit bool, otherKnownEvents map[int]i
 	//Compute Known
 	n.coreLock.Lock()
 	knownEvents := n.core.KnownEvents()
+	n.logger.WithFields(logrus.Fields{
+		"my_id":    n.id,
+		"my_known": knownEvents,
+	}).Debug("GetLocalKnownEvents:KnownEvents()")
 	n.coreLock.Unlock()
 
 	//Send SyncRequest
