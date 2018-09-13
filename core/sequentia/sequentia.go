@@ -11,24 +11,25 @@ import (
 	"github.com/paradigm-network/paradigm/types"
 	"github.com/paradigm-network/paradigm/errors"
 	"sync/atomic"
+	"github.com/sirupsen/logrus"
 )
 
 // CometGraph is core component of Sequentia layer.
 type CometGraph struct {
-	Participants            map[string]int   //map of all node running the sequentia layer  [public key] => id
-	ReverseParticipants     map[int]string   //reverse of Participants map  [id] => public key
-	Store                   storage.Store    //storage interface of Comets and Comets Rounds
-	UndeterminedEvents      []string         //undetermined comets [index] => hash
-	UndecidedRounds         []int            //queue of Rounds which have undecided witnesses
-	LastConsensusRound      *int             //index of last round where the fame of all witnesses has been decided
-	LastBlockIndex          int              //index of last block
-	LastCommitedRoundEvents int              //number of events in round before LastConsensusRound
-	ConsensusTransactions   int              //number of consensus transactions
-	PendingLoadedEvents     int              //number of loaded events that are not yet committed
-	topologicalIndex        int              //counter used to order events in topological order
+	Participants            map[string]int //map of all node running the sequentia layer  [public key] => id
+	ReverseParticipants     map[int]string //reverse of Participants map  [id] => public key
+	Store                   storage.Store  //storage interface of Comets and Comets Rounds
+	UndeterminedEvents      []string       //undetermined comets [index] => hash
+	UndecidedRounds         []int          //queue of Rounds which have undecided witnesses
+	LastConsensusRound      *int           //index of last round where the fame of all witnesses has been decided
+	LastBlockIndex          int            //index of last block
+	LastCommitedRoundEvents int            //number of events in round before LastConsensusRound
+	ConsensusTransactions   int            //number of consensus transactions
+	PendingLoadedEvents     int            //number of loaded events that are not yet committed
+	topologicalIndex        int            //counter used to order events in topological order
 	mostPlurality           int
 
-	commitCh                chan types.Block //channel for committing Blocks
+	commitCh chan types.Block //channel for committing Blocks
 
 	//caches
 	ancestorCache           *common.LRU
@@ -37,14 +38,16 @@ type CometGraph struct {
 	stronglySeeCache        *common.LRU
 	parentRoundCache        *common.LRU
 	roundCache              *common.LRU
+
+	logger *logrus.Logger
 }
 
 // Global Instance of CometGraph.
 var Instance atomic.Value
 
 // Build a new CometGraph struct.
-func BuildCometGraph(participants map[string]int, store storage.Store, commitCh chan types.Block) *CometGraph {
-	if Instance.Load().(*CometGraph) != nil {
+func BuildCometGraph(participants map[string]int, store storage.Store, commitCh chan types.Block, logger *logrus.Logger) *CometGraph {
+	if Instance.Load() != nil {
 		return Instance.Load().(*CometGraph)
 	}
 	reverseParticipants := make(map[int]string)
@@ -67,6 +70,7 @@ func BuildCometGraph(participants map[string]int, store storage.Store, commitCh 
 		mostPlurality:           2*len(participants)/3 + 1,
 		UndecidedRounds:         []int{0}, //initialize,
 		LastBlockIndex:          -1,
+		logger:                  logger,
 	}
 	Instance.Store(cometGraph)
 	return &cometGraph
@@ -77,12 +81,12 @@ func (cg *CometGraph) MostPlurality() int {
 }
 
 //true if y is an ancestor of x
-func (cg *CometGraph) AncestorOf(x, y string) bool {
-	if c, ok := cg.ancestorCache.Get(storage.Key{x, y}); ok {
+func (cg *CometGraph) AncestorOf(cx, cy string) bool {
+	if c, ok := cg.ancestorCache.Get(storage.NewKey(cx, cy)); ok {
 		return c.(bool)
 	}
-	a := cg.ancestor(x, y)
-	cg.ancestorCache.Add(storage.Key{x, y}, a)
+	a := cg.ancestor(cx, cy)
+	cg.ancestorCache.Add(storage.NewKey(cx, cy), a)
 	return a
 }
 
@@ -110,11 +114,11 @@ func (cg *CometGraph) ancestor(x, y string) bool {
 
 //true if y is a self-ancestor of x
 func (cg *CometGraph) SelfAncestor(x, y string) bool {
-	if c, ok := cg.selfAncestorCache.Get(storage.Key{x, y}); ok {
+	if c, ok := cg.selfAncestorCache.Get(storage.NewKey(x, y)); ok {
 		return c.(bool)
 	}
 	a := cg.selfAncestor(x, y)
-	cg.selfAncestorCache.Add(storage.Key{x, y}, a)
+	cg.selfAncestorCache.Add(storage.NewKey(x, y), a)
 	return a
 }
 
@@ -148,11 +152,11 @@ func (cg *CometGraph) See(x, y string) bool {
 
 //oldest self-ancestor of x to see y
 func (cg *CometGraph) OldestSelfAncestorToSee(x, y string) string {
-	if c, ok := cg.oldestSelfAncestorCache.Get(storage.Key{x, y}); ok {
+	if c, ok := cg.oldestSelfAncestorCache.Get(storage.NewKey(x, y)); ok {
 		return c.(string)
 	}
 	res := cg.oldestSelfAncestorToSee(x, y)
-	cg.oldestSelfAncestorCache.Add(storage.Key{x, y}, res)
+	cg.oldestSelfAncestorCache.Add(storage.NewKey(x, y), res)
 	return res
 }
 
@@ -177,11 +181,11 @@ func (cg *CometGraph) oldestSelfAncestorToSee(x, y string) string {
 
 //true if x strongly sees y
 func (cg *CometGraph) StronglySee(x, y string) bool {
-	if c, ok := cg.stronglySeeCache.Get(storage.Key{x, y}); ok {
+	if c, ok := cg.stronglySeeCache.Get(storage.NewKey(x, y)); ok {
 		return c.(bool)
 	}
 	ss := cg.stronglySee(x, y)
-	cg.stronglySeeCache.Add(storage.Key{x, y}, ss)
+	cg.stronglySeeCache.Add(storage.NewKey(x, y), ss)
 	return ss
 }
 
@@ -364,6 +368,13 @@ func (cg *CometGraph) RoundDiff(x, y string) (int, error) {
 
 //insert comet into db, with comet check and wireInfo if setWireInfo is true.
 func (cg *CometGraph) InsertComet(comet types.Comet, setWireInfo bool) error {
+	b,_:=comet.Body.Marshal()
+	cg.logger.WithFields(logrus.Fields{
+		"Creator":   comet.Creator(),
+		"Marshal":   string(b),
+		"Signature": comet.Signature,
+		"CreatorID":comet.Body.CreatorID,
+	}).Info("InsertComet")
 	//verify signature
 	if ok, err := comet.Verify(); !ok {
 		if err != nil {
@@ -388,6 +399,13 @@ func (cg *CometGraph) InsertComet(comet types.Comet, setWireInfo bool) error {
 			return fmt.Errorf("SetWireInfo: %s", err)
 		}
 	}
+
+	cg.logger.WithFields(logrus.Fields{
+		"Creator":   comet.Creator(),
+		"Marshal":   string(b),
+		"Signature": comet.Signature,
+		"CreatorID":comet.Body.CreatorID,
+	}).Info("SetWireInfo")
 
 	if err := cg.InitEventCoordinates(&comet); err != nil {
 		return fmt.Errorf("InitEventCoordinates: %s", err)
@@ -417,43 +435,43 @@ func (cg *CometGraph) recordBlockSignatures(blockSignatures []types.BlockSignatu
 		//check if validator belongs to list of participants
 		validatorHex := fmt.Sprintf("0x%X", bs.Validator)
 		if _, ok := cg.Participants[validatorHex]; !ok {
-			//cg.logger.WithFields(logrus.Fields{
-			//	"index":     bs.Index,
-			//	"validator": validatorHex,
-			//}).Warning("Verifying Block signature. Unknown validator")
+			cg.logger.WithFields(logrus.Fields{
+				"index":     bs.Index,
+				"validator": validatorHex,
+			}).Warning("Verifying Block signature. Unknown validator")
 			continue
 		}
 
 		block, err := cg.Store.GetBlock(bs.Index)
 		if err != nil {
-			//h.logger.WithFields(logrus.Fields{
-			//	"index": bs.Index,
-			//	"msg":   err,
-			//}).Warning("Verifying Block signature. Could not fetch Block")
+			cg.logger.WithFields(logrus.Fields{
+				"index": bs.Index,
+				"msg":   err,
+			}).Warning("Verifying Block signature. Could not fetch Block")
 			continue
 		}
 		valid, err := block.Verify(bs)
 		if err != nil {
-			//h.logger.WithFields(logrus.Fields{
-			//	"index": bs.Index,
-			//	"msg":   err,
-			//}).Warning("Verifying Block signature")
+			cg.logger.WithFields(logrus.Fields{
+				"index": bs.Index,
+				"msg":   err,
+			}).Warning("Verifying Block signature")
 			continue
 		}
 		if !valid {
-			//h.logger.WithFields(logrus.Fields{
-			//	"index": bs.Index,
-			//}).Warning("Verifying Block signature. Invalid signature")
+			cg.logger.WithFields(logrus.Fields{
+				"index": bs.Index,
+			}).Warning("Verifying Block signature. Invalid signature")
 			continue
 		}
 
 		block.SetSignature(bs)
 
 		if err := cg.Store.SetBlock(block); err != nil {
-			//h.logger.WithFields(logrus.Fields{
-			//	"index": bs.Index,
-			//	"msg":   err,
-			//}).Warning("Saving Block")
+			cg.logger.WithFields(logrus.Fields{
+				"index": bs.Index,
+				"msg":   err,
+			}).Warning("Saving Block")
 		}
 	}
 }
@@ -625,6 +643,7 @@ func (cg *CometGraph) SetWireInfo(comet *types.Comet) error {
 }
 
 func (cg *CometGraph) ReadWireInfo(wevent types.WireEvent) (*types.Comet, error) {
+	fmt.Printf("ReadWireInfo:wevent=%+v\n",wevent)
 	selfParent := ""
 	otherParent := ""
 	var err error
@@ -642,7 +661,7 @@ func (cg *CometGraph) ReadWireInfo(wevent types.WireEvent) (*types.Comet, error)
 		}
 	}
 	if wevent.Body.OtherParentIndex >= 0 {
-		otherParentCreator := cg.ReverseParticipants[wevent.Body.OtherParentCreatorID]
+		otherParentCreator :=cg.ReverseParticipants[wevent.Body.OtherParentCreatorID]
 		otherParent, err = cg.Store.ParticipantEvent(otherParentCreator, wevent.Body.OtherParentIndex)
 		if err != nil {
 			return nil, err
@@ -657,11 +676,16 @@ func (cg *CometGraph) ReadWireInfo(wevent types.WireEvent) (*types.Comet, error)
 
 		Timestamp:            wevent.Body.Timestamp,
 		Index:                wevent.Body.Index,
-		SelfParentIndex:      wevent.Body.SelfParentIndex,
-		OtherParentCreatorID: wevent.Body.OtherParentCreatorID,
-		OtherParentIndex:     wevent.Body.OtherParentIndex,
-		CreatorID:            wevent.Body.CreatorID,
+		//SelfParentIndex:      wevent.Body.SelfParentIndex,
+		//OtherParentCreatorID: wevent.Body.OtherParentCreatorID,
+		//OtherParentIndex:     wevent.Body.OtherParentIndex,
+		//CreatorID:            wevent.Body.CreatorID,
 	}
+
+	body.SetSelfParentIndex(wevent.Body.SelfParentIndex)
+	body.SetOtherParentCreatorID( wevent.Body.OtherParentCreatorID)
+	body.SetOtherParentIndex(wevent.Body.OtherParentIndex)
+	body.SetCreatorID(wevent.Body.CreatorID)
 
 	comet := &types.Comet{
 		Body:      body,

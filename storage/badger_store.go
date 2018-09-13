@@ -45,6 +45,8 @@ func NewBadgerStore(participants map[string]int, cacheSize int, path string) (*B
 	if err := store.dbSetParticipants(participants); err != nil {
 		return nil, err
 	}
+
+	fmt.Printf("NewBadgerStore:dbSetRoots:rootsMap=%+v\n",inmemStore.roots)
 	if err := store.dbSetRoots(inmemStore.roots); err != nil {
 		return nil, err
 	}
@@ -180,15 +182,20 @@ func (s *BadgerStore) KnownEvents() map[int]int {
 	for p, pid := range s.participants {
 		index := -1
 		last, isRoot, err := s.LastEventFrom(p)
+		fmt.Printf("KnownEvents:LastEventFrom:participant=%s,isRoot=%t,lastkey=%s\n",p,isRoot,last)
 		if err == nil {
 			if isRoot {
 				root, err := s.GetRoot(p)
+				fmt.Printf("KnownEvents:GetRoot:participant=%s,isRoot=%t,rootIndex=%d\n",p,isRoot,root.Index)
 				if err != nil {
 					last = root.X
 					index = root.Index
 				}
 			} else {
 				lastEvent, err := s.GetComet(last)
+				str,_:=lastEvent.Marshal()
+				fmt.Printf("KnownEvents:GetRoot:participant=%s,isRoot=%t,eventIndex=%d\n",p,isRoot,lastEvent.Index())
+				fmt.Printf("KnownEvents:GetRoot:participant=%s,isRoot=%t,lastEvent=%s\n",p,isRoot,string(str))
 				if err == nil {
 					index = lastEvent.Index()
 				}
@@ -439,6 +446,7 @@ func (s *BadgerStore) dbSetRoots(roots map[string]types.Root) error {
 			return err
 		}
 		key := participantRootKey(participant)
+		fmt.Printf("dbSetRoots:participant=%+v,key=%s\n",participant,key)
 		//insert [participant_root] => [root bytes]
 		if err := tx.Set(key, val); err != nil {
 			return err
