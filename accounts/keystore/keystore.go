@@ -11,12 +11,19 @@ import (
 	"runtime"
 )
 
-var (
+
+
+var(
 	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
+	ErrLocked  = accounts.NewAuthNeededError("password or unlock")
+
 )
+
 
 // KeyStoreScheme is the protocol scheme prefixing account and wallet URLs.
 var KeyStoreScheme = "keystore"
+
+
 
 // KeyStore manages a key storage directory on disk.
 type KeyStore struct {
@@ -38,6 +45,7 @@ type unlocked struct {
 	abort chan struct{}
 }
 
+//node包 -- config.go -- makeaccountmanager()
 // NewKeyStore creates a keystore for the given directory.
 func NewKeyStore(keydir string, scryptN, scryptP int) *KeyStore {
 	keydir, _ = filepath.Abs(keydir)
@@ -45,6 +53,7 @@ func NewKeyStore(keydir string, scryptN, scryptP int) *KeyStore {
 	ks.init(keydir)
 	return ks
 }
+
 
 func (ks *KeyStore) init(keydir string) {
 	// Lock the mutex since the account cache might call back with events
@@ -69,10 +78,28 @@ func (ks *KeyStore) init(keydir string) {
 	}
 }
 
+
+
 // zeroKey zeroes a private key in memory.
 func zeroKey(k *ecdsa.PrivateKey) {
 	b := k.D.Bits()
 	for i := range b {
 		b[i] = 0
 	}
+}
+
+
+// SignHash calculates a ECDSA signature for the given hash. The produced
+// signature is in the [R || S || V] format where V is 0 or 1.
+func (ks *KeyStore) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
+	// Look up the key to sign with and abort if it cannot be found
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+
+	unlockedKey, found := ks.unlocked[a.Address]
+	if !found {
+		return nil, ErrLocked
+	}
+	// Sign the hash using plain ECDSA operations
+	return crypto.Sign(hash, unlockedKey.PrivateKey)
 }
