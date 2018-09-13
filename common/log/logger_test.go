@@ -5,7 +5,8 @@ import (
 )
 
 func TestLogger(t *testing.T) {
-	InitRotateWriter("./log.log")
-	logger := GetLogger("main")
+	//InitRotateWriter("./log.log")
+
+	logger := GetConsoleLogger("main")
 	logger.Info().Msg("log info xxx")
 }

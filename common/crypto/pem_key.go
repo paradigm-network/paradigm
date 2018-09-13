@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"sync"
+	"github.com/paradigm-network/paradigm/common/log"
 )
 
 const (
@@ -89,6 +90,8 @@ func GeneratePemKey() (*PemDump, error) {
 		PublicKey:  pub,
 		PrivateKey: string(data),
 	}
+
+	log.GetConsoleLogger("Crypto").Info().Msg("GeneratePemKey success.")
 
 	return &pemDump, err
 }

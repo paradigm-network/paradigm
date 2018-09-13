@@ -17,7 +17,6 @@ import (
 	"github.com/paradigm-network/paradigm/network/peer"
 	"github.com/paradigm-network/paradigm/common/crypto"
 	"github.com/paradigm-network/paradigm/version"
-	"github.com/paradigm-network/paradigm/common/log"
 )
 
 var (
@@ -151,20 +150,16 @@ func main() {
 }
 
 func keygen(c *cli.Context) error {
-	log.InitRotateWriter("./")
-	logger := log.GetLogger("main")
 	pemDump, err := crypto.GeneratePemKey()
 	if err != nil {
-		logger.Error().Msg("Error generating PemDump")
+		fmt.Println("Error generating PemDump")
 		os.Exit(2)
 	}
 
-	//fmt.Println("PublicKey:")
-	logger.Info().Str("PublicKey",pemDump.PublicKey)
-	//fmt.Println(pemDump.PublicKey)
-	//fmt.Println("PrivateKey:")
-	//fmt.Println(pemDump.PrivateKey)
-	logger.Info().Str("PrivateKey",pemDump.PrivateKey)
+	fmt.Println("PublicKey:")
+	fmt.Println(pemDump.PublicKey)
+	fmt.Println("PrivateKey:")
+	fmt.Println(pemDump.PrivateKey)
 
 	return nil
 }
