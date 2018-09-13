@@ -38,7 +38,6 @@ type unlocked struct {
 	abort chan struct{}
 }
 
-//node包 -- config.go -- makeaccountmanager()
 // NewKeyStore creates a keystore for the given directory.
 func NewKeyStore(keydir string, scryptN, scryptP int) *KeyStore {
 	keydir, _ = filepath.Abs(keydir)
