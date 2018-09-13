@@ -29,12 +29,12 @@ func TestSignComet(t *testing.T) {
 	body := createDummyCometBody()
 	//body.Creator = publicKeyBytes
 
-	event := Comet{Body: body}
-	if err := event.Sign(privateKey); err != nil {
+	comet := Comet{Body: body}
+	if err := comet.Sign(privateKey); err != nil {
 		t.Fatalf("Error signing Event: %s", err)
 	}
 
-	res, err := event.Verify()
+	res, err := comet.Verify()
 	if err != nil {
 		t.Fatalf("Error verifying signature: %s", err)
 	}
