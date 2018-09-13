@@ -6,7 +6,17 @@ import (
 	"paradigm/event"
 	"sync"
 	"path/filepath"
+	"errors"
+	"crypto/ecdsa"
+	"runtime"
 )
+
+var (
+	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
+)
+
+// KeyStoreScheme is the protocol scheme prefixing account and wallet URLs.
+var KeyStoreScheme = "keystore"
 
 // KeyStore manages a key storage directory on disk.
 type KeyStore struct {
@@ -28,11 +38,41 @@ type unlocked struct {
 	abort chan struct{}
 }
 
-//node包 -- config.go -- makeaccountmanager()
 // NewKeyStore creates a keystore for the given directory.
 func NewKeyStore(keydir string, scryptN, scryptP int) *KeyStore {
 	keydir, _ = filepath.Abs(keydir)
 	ks := &KeyStore{storage: &keyStorePassphrase{keydir, scryptN, scryptP}}
 	ks.init(keydir)
 	return ks
+}
+
+func (ks *KeyStore) init(keydir string) {
+	// Lock the mutex since the account cache might call back with events
+	ks.mu.Lock()
+	defer ks.mu.Unlock()
+
+	// Initialize the set of unlocked keys and the account cache
+	ks.unlocked = make(map[common.Address]*unlocked)
+	ks.cache, ks.changes = newAccountCache(keydir)
+
+	// TODO: In order for this finalizer to work, there must be no references
+	// to ks. addressCache doesn't keep a reference but unlocked keys do,
+	// so the finalizer will not trigger until all timed unlocks have expired.
+	runtime.SetFinalizer(ks, func(m *KeyStore) {
+		m.cache.close()
+	})
+	// Create the initial list of wallets from the cache
+	accs := ks.cache.accounts()
+	ks.wallets = make([]accounts.Wallet, len(accs))
+	for i := 0; i < len(accs); i++ {
+		ks.wallets[i] = &keystoreWallet{account: accs[i], keystore: ks}
+	}
+}
+
+// zeroKey zeroes a private key in memory.
+func zeroKey(k *ecdsa.PrivateKey) {
+	b := k.D.Bits()
+	for i := range b {
+		b[i] = 0
+	}
 }
