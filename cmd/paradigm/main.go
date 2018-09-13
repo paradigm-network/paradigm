@@ -95,7 +95,7 @@ var (
 	}
 	StoreFlag = cli.StringFlag{
 		Name:  "store",
-		Usage: "badger, inmem",
+		Usage: "badger",
 		Value: "badger",
 	}
 	StorePathFlag = cli.StringFlag{
@@ -250,35 +250,27 @@ func run(c *cli.Context) error {
 		"id":   nodeID,
 	}).Debug("PARTICIPANTS")
 
-	//Instantiate the Store (inmem or badger)
+	//Instantiate the Store (badger)
 	var store storage.Store
 	var needBootstrap bool
-	switch storeType {
-	case "inmem":
-		store = storage.NewInmemStore(pmap, conf.CacheSize)
-	case "badger":
-		//If the file already exists, load and bootstrap the store using the file
-		if _, err := os.Stat(conf.StorePath); err == nil {
-			logger.Debug("loading badger store from existing database")
-			store, err = storage.LoadBadgerStore(conf.CacheSize, conf.StorePath)
-			if err != nil {
-				return cli.NewExitError(
-					fmt.Sprintf("failed to load BadgerStore from existing file: %s", err),
-					1)
-			}
-			needBootstrap = true
-		} else {
-			//Otherwise create a new one
-			logger.Debug("creating new badger store from fresh database")
-			store, err = storage.NewBadgerStore(pmap, conf.CacheSize, conf.StorePath)
-			if err != nil {
-				return cli.NewExitError(
-					fmt.Sprintf("failed to create new BadgerStore: %s", err),
-					1)
-			}
+	if _, err := os.Stat(conf.StorePath); err == nil {
+		logger.Debug("loading badger store from existing database")
+		store, err = storage.LoadBadgerStore(conf.CacheSize, conf.StorePath)
+		if err != nil {
+			return cli.NewExitError(
+				fmt.Sprintf("failed to load BadgerStore from existing file: %s", err),
+				1)
 		}
-	default:
-		return cli.NewExitError(fmt.Sprintf("invalid store option: %s", storeType), 1)
+		needBootstrap = true
+	} else {
+		//Otherwise create a new one
+		logger.Debug("creating new badger store from fresh database")
+		store, err = storage.NewBadgerStore(pmap, conf.CacheSize, conf.StorePath)
+		if err != nil {
+			return cli.NewExitError(
+				fmt.Sprintf("failed to create new BadgerStore: %s", err),
+				1)
+		}
 	}
 
 	trans, err := tcp.NewTCPTransport(addr,

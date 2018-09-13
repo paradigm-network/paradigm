@@ -20,10 +20,40 @@ type CometBody struct {
 
 	//wire
 	//It is cheaper to send ints then hashes over the wire
-	SelfParentIndex      int
-	OtherParentCreatorID int
-	OtherParentIndex     int
-	CreatorID            int
+	selfParentIndex      int
+	otherParentCreatorID int
+	otherParentIndex     int
+	creatorID            int
+}
+
+func (e *CometBody) SetSelfParentIndex(a int) {
+	e.selfParentIndex = a
+}
+
+func (e *CometBody) SelfParentIndex() int {
+	return e.selfParentIndex
+}
+
+func (e *CometBody) OtherParentCreatorID() int {
+	return e.otherParentCreatorID
+}
+func (e *CometBody) SetOtherParentCreatorID(a int) {
+	e.otherParentCreatorID = a
+}
+
+func (e *CometBody) OtherParentIndex() int {
+	return e.otherParentIndex
+}
+
+func (e *CometBody) SetOtherParentIndex(a int) {
+	e.otherParentIndex = a
+}
+func (e *CometBody) CreatorID() int {
+	return e.creatorID
+}
+
+func (e *CometBody) SetCreatorID(a int) {
+	e.creatorID = a
 }
 
 //json encoding of body only
@@ -153,7 +183,9 @@ func (e *Comet) Sign(privKey *ecdsa.PrivateKey) error {
 func (e *Comet) Verify() (bool, error) {
 	pubBytes := e.Body.Creator
 	pubKey := crypto.ToECDSAPub(pubBytes)
+	fmt.Printf("Verify:pubBytes=%+v,key=%s\n", pubBytes, pubKey)
 	signBytes, err := e.Body.Hash()
+	fmt.Printf("Verify:signBytes=%+v\n", signBytes)
 	if err != nil {
 		return false, err
 	}
@@ -213,10 +245,10 @@ func (e *Comet) SetWireInfo(selfParentIndex,
 otherParentCreatorID,
 otherParentIndex,
 creatorID int) {
-	e.Body.SelfParentIndex = selfParentIndex
-	e.Body.OtherParentCreatorID = otherParentCreatorID
-	e.Body.OtherParentIndex = otherParentIndex
-	e.Body.CreatorID = creatorID
+	e.Body.selfParentIndex = selfParentIndex
+	e.Body.otherParentCreatorID = otherParentCreatorID
+	e.Body.otherParentIndex = otherParentIndex
+	e.Body.creatorID = creatorID
 }
 
 func (e *Comet) WireBlockSignatures() []WireBlockSignature {
@@ -236,10 +268,10 @@ func (e *Comet) ToWire() WireEvent {
 	return WireEvent{
 		Body: WireBody{
 			Transactions:         e.Body.Transactions,
-			SelfParentIndex:      e.Body.SelfParentIndex,
-			OtherParentCreatorID: e.Body.OtherParentCreatorID,
-			OtherParentIndex:     e.Body.OtherParentIndex,
-			CreatorID:            e.Body.CreatorID,
+			SelfParentIndex:      e.Body.SelfParentIndex(),
+			OtherParentCreatorID: e.Body.OtherParentCreatorID(),
+			OtherParentIndex:     e.Body.OtherParentIndex(),
+			CreatorID:            e.Body.CreatorID(),
 			Timestamp:            e.Body.Timestamp,
 			Index:                e.Body.Index,
 			BlockSignatures:      e.WireBlockSignatures(),

@@ -400,6 +400,13 @@ func (cg *CometGraph) InsertComet(comet types.Comet, setWireInfo bool) error {
 		}
 	}
 
+	cg.logger.WithFields(logrus.Fields{
+		"Creator":   comet.Creator(),
+		"Marshal":   string(b),
+		"Signature": comet.Signature,
+		"CreatorID":comet.Body.CreatorID,
+	}).Info("SetWireInfo")
+
 	if err := cg.InitEventCoordinates(&comet); err != nil {
 		return fmt.Errorf("InitEventCoordinates: %s", err)
 	}
@@ -636,6 +643,7 @@ func (cg *CometGraph) SetWireInfo(comet *types.Comet) error {
 }
 
 func (cg *CometGraph) ReadWireInfo(wevent types.WireEvent) (*types.Comet, error) {
+	fmt.Printf("ReadWireInfo:wevent=%+v\n",wevent)
 	selfParent := ""
 	otherParent := ""
 	var err error
@@ -668,11 +676,16 @@ func (cg *CometGraph) ReadWireInfo(wevent types.WireEvent) (*types.Comet, error)
 
 		Timestamp:            wevent.Body.Timestamp,
 		Index:                wevent.Body.Index,
-		SelfParentIndex:      wevent.Body.SelfParentIndex,
-		OtherParentCreatorID: wevent.Body.OtherParentCreatorID,
-		OtherParentIndex:     wevent.Body.OtherParentIndex,
-		CreatorID:            wevent.Body.CreatorID,
+		//SelfParentIndex:      wevent.Body.SelfParentIndex,
+		//OtherParentCreatorID: wevent.Body.OtherParentCreatorID,
+		//OtherParentIndex:     wevent.Body.OtherParentIndex,
+		//CreatorID:            wevent.Body.CreatorID,
 	}
+
+	body.SetSelfParentIndex(wevent.Body.SelfParentIndex)
+	body.SetOtherParentCreatorID( wevent.Body.OtherParentCreatorID)
+	body.SetOtherParentIndex(wevent.Body.OtherParentIndex)
+	body.SetCreatorID(wevent.Body.CreatorID)
 
 	comet := &types.Comet{
 		Body:      body,
