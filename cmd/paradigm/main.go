@@ -17,6 +17,7 @@ import (
 	"github.com/paradigm-network/paradigm/network/peer"
 	"github.com/paradigm-network/paradigm/common/crypto"
 	"github.com/paradigm-network/paradigm/version"
+	"github.com/paradigm-network/paradigm/common/log"
 )
 
 var (
@@ -169,8 +170,6 @@ func printVersion(c *cli.Context) error {
 }
 
 func run(c *cli.Context) error {
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
 	onlyAccretion := c.Bool(OnlyAccretion.Name)
 	datadir := c.String(DataDirFlag.Name)
 	addr := c.String(NodeAddressFlag.Name)
@@ -187,28 +186,27 @@ func run(c *cli.Context) error {
 	syncLimit := c.Int(SyncLimitFlag.Name)
 	storeType := c.String(StoreFlag.Name)
 	storePath := c.String(StorePathFlag.Name)
-
-	logger.WithFields(logrus.Fields{
-		"only_accretion": onlyAccretion,
-		"datadir":        datadir,
-		"gw2_addr":       gw2Address,
-		"fn2_addr":       fn2Address,
-		"node_addr":      addr,
-		"no_client":      noclient,
-		"proxy_addr":     proxyAddress,
-		"client_addr":    clientAddress,
-		"service_addr":   serviceAddress,
-		"heartbeat":      heartbeat,
-		"max_pool":       maxPool,
-		"tcp_timeout":    tcpTimeout,
-		"cache_size":     cacheSize,
-		"store":          storeType,
-		"store_path":     storePath,
-	}).Debug("RUN")
+	logger := log.GetLogger("Main")
+	logger.Info().Interface(
+		"only_accretion", onlyAccretion).Interface(
+		"datadir", datadir).Interface(
+		"gw2_addr", gw2Address).Interface(
+		"fn2_addr", fn2Address).Interface(
+		"node_addr", addr).Interface(
+		"no_client", noclient).Interface(
+		"proxy_addr", proxyAddress).Interface(
+		"client_addr", clientAddress).Interface(
+		"service_addr", serviceAddress).Interface(
+		"heartbeat", heartbeat).Interface(
+		"max_pool", maxPool).Interface(
+		"tcp_timeout", tcpTimeout).Interface(
+		"cache_size", cacheSize).Interface(
+		"store", storeType).Interface(
+		"store_path", storePath).Msg("Running Args")
 
 	conf := core.NewConfig(onlyAccretion, time.Duration(heartbeat)*time.Millisecond,
 		time.Duration(tcpTimeout)*time.Millisecond,
-		cacheSize, syncLimit, storeType, storePath, logger, gw2Address, fn2Address)
+		cacheSize, syncLimit, storeType, storePath, gw2Address, fn2Address)
 
 	// Create the PEM key
 	pemKey := crypto.NewPemKey(datadir)
@@ -245,16 +243,13 @@ func run(c *cli.Context) error {
 	nodePub := fmt.Sprintf("0x%X", crypto.FromECDSAPub(&key.PublicKey))
 	nodeID := pmap[nodePub]
 
-	logger.WithFields(logrus.Fields{
-		"pmap": pmap,
-		"id":   nodeID,
-	}).Debug("PARTICIPANTS")
+	logger.Info().Interface("participantMap", pmap).Int("nodeID", nodeID).Msg("PARTICIPANTS")
 
 	//Instantiate the Store (badger)
 	var store storage.Store
 	var needBootstrap bool
 	if _, err := os.Stat(conf.StorePath); err == nil {
-		logger.Debug("loading badger store from existing database")
+		logger.Info().Msg("Loading badger store from existing database")
 		store, err = storage.LoadBadgerStore(conf.CacheSize, conf.StorePath)
 		if err != nil {
 			return cli.NewExitError(
@@ -264,7 +259,7 @@ func run(c *cli.Context) error {
 		needBootstrap = true
 	} else {
 		//Otherwise create a new one
-		logger.Debug("creating new badger store from fresh database")
+		logger.Info().Msg("Creating new badger store from fresh database")
 		store, err = storage.NewBadgerStore(pmap, conf.CacheSize, conf.StorePath)
 		if err != nil {
 			return cli.NewExitError(
@@ -274,13 +269,13 @@ func run(c *cli.Context) error {
 	}
 
 	trans, err := tcp.NewTCPTransport(addr,
-		nil, maxPool, conf.TCPTimeout, logger)
+		nil, maxPool, conf.TCPTimeout)
 	if err != nil {
 		return cli.NewExitError(err, 1)
 	}
 
 	var prox proxy.AppProxy
-	prox = proxy.NewInmemAppProxy(logger)
+	prox = proxy.NewInmemAppProxy()
 	//todo impl. if no_client
 
 	node := core.NewNode(conf, nodeID, key, peers, store, trans, prox)

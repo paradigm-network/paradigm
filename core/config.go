@@ -19,8 +19,6 @@ type Config struct {
 	Fn2Address string // function execute engine address
 
 	//TODO add QCP config here
-
-	Logger *logrus.Logger
 }
 
 func NewConfig(
@@ -31,7 +29,6 @@ func NewConfig(
 	syncLimit int,
 	storeType string,
 	storePath string,
-	logger *logrus.Logger,
 	gw2Address, fn2Address string,
 ) *Config {
 	return &Config{
@@ -42,7 +39,6 @@ func NewConfig(
 		SyncLimit:            syncLimit,
 		StoreType:            storeType,
 		StorePath:            storePath,
-		Logger:               logger,
 		Gw2Address:           gw2Address,
 		Fn2Address:           fn2Address,
 	}
@@ -61,7 +57,6 @@ func DefaultConfig() *Config {
 		SyncLimit:            100,
 		StoreType:            storeType,
 		StorePath:            storePath,
-		Logger:               logger,
 		Gw2Address:           "127.0.0.1:9000",
 		Fn2Address:           "127.0.0.1:8000",
 	}

@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/paradigm-network/paradigm/network"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
+	"github.com/paradigm-network/paradigm/common/log"
 )
 
 const (
-	rpcSync uint8 = iota
+	rpcSync      uint8 = iota
 	rpcEagerSync
 
 	// DefaultTimeoutScale is the default TimeoutScale in a NetworkTransport.
@@ -46,7 +47,7 @@ The response is an error string followed by the response object,
 both are encoded using msgpack
 */
 type NetworkTransport struct {
-	logger *logrus.Logger
+	logger *zerolog.Logger
 
 	connPool     map[string][]*netConn
 	connPoolLock sync.Mutex
@@ -92,16 +93,11 @@ func NewNetworkTransport(
 	stream StreamLayer,
 	maxPool int,
 	timeout time.Duration,
-	logger *logrus.Logger,
 ) *NetworkTransport {
-	if logger == nil {
-		logger = logrus.New()
-		logger.Level = logrus.DebugLevel
-	}
 	trans := &NetworkTransport{
 		connPool:   make(map[string][]*netConn),
 		consumeCh:  make(chan network.RPC),
-		logger:     logger,
+		logger:     log.GetLogger("TCP Transport"),
 		maxPool:    maxPool,
 		shutdownCh: make(chan struct{}),
 		stream:     stream,
@@ -144,7 +140,6 @@ func (n *NetworkTransport) IsShutdown() bool {
 	}
 }
 
-
 // Sync implements the Transport interface.
 func (n *NetworkTransport) Sync(target string, args *network.SyncRequest, resp *network.SyncResponse) error {
 	return n.genericRPC(target, rpcSync, args, resp)
@@ -154,7 +149,6 @@ func (n *NetworkTransport) Sync(target string, args *network.SyncRequest, resp *
 func (n *NetworkTransport) EagerSync(target string, args *network.EagerSyncRequest, resp *network.EagerSyncResponse) error {
 	return n.genericRPC(target, rpcEagerSync, args, resp)
 }
-
 
 // getPooledConn is used to grab a pooled connection.
 func (n *NetworkTransport) getPooledConn(target string) *netConn {
@@ -296,13 +290,13 @@ func (n *NetworkTransport) listen() {
 			if n.IsShutdown() {
 				return
 			}
-			n.logger.WithField("error", err).Error("Failed to accept connection")
+			n.logger.Error().Err(err).Msg("Failed to accept connection")
 			continue
 		}
-		n.logger.WithFields(logrus.Fields{
-			"node": conn.LocalAddr(),
-			"from": conn.RemoteAddr(),
-		}).Debug("accepted connection")
+		n.logger.Info().
+			Str("node", conn.LocalAddr().String()).
+			Str("from", conn.RemoteAddr().String()).
+			Msg("accepted connection")
 
 		// Handle the connection in dedicated routine
 		go n.handleConn(conn)
@@ -320,12 +314,12 @@ func (n *NetworkTransport) handleConn(conn net.Conn) {
 	for {
 		if err := n.handleCommand(r, dec, enc); err != nil {
 			if err != io.EOF {
-				n.logger.WithField("error", err).Error("Failed to decode incoming command")
+				n.logger.Error().Err(err).Msg("Failed to decode incoming command")
 			}
 			return
 		}
 		if err := w.Flush(); err != nil {
-			n.logger.WithField("error", err).Error("Failed to flush response")
+			n.logger.Error().Err(err).Msg("Failed to flush response")
 			return
 		}
 	}

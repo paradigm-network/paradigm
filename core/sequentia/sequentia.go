@@ -11,7 +11,8 @@ import (
 	"github.com/paradigm-network/paradigm/types"
 	"github.com/paradigm-network/paradigm/errors"
 	"sync/atomic"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
+	"github.com/paradigm-network/paradigm/common/log"
 )
 
 // CometGraph is core component of Sequentia layer.
@@ -39,17 +40,18 @@ type CometGraph struct {
 	parentRoundCache        *common.LRU
 	roundCache              *common.LRU
 
-	logger *logrus.Logger
+	logger *zerolog.Logger
 }
 
 // Global Instance of CometGraph.
 var Instance atomic.Value
 
 // Build a new CometGraph struct.
-func BuildCometGraph(participants map[string]int, store storage.Store, commitCh chan types.Block, logger *logrus.Logger) *CometGraph {
+func BuildCometGraph(participants map[string]int, store storage.Store, commitCh chan types.Block) *CometGraph {
 	if Instance.Load() != nil {
 		return Instance.Load().(*CometGraph)
 	}
+
 	reverseParticipants := make(map[int]string)
 	for pk, id := range participants {
 		reverseParticipants[id] = pk
@@ -70,7 +72,7 @@ func BuildCometGraph(participants map[string]int, store storage.Store, commitCh 
 		mostPlurality:           2*len(participants)/3 + 1,
 		UndecidedRounds:         []int{0}, //initialize,
 		LastBlockIndex:          -1,
-		logger:                  logger,
+		logger:                  log.GetLogger("Sequentia"),
 	}
 	Instance.Store(cometGraph)
 	return &cometGraph
@@ -369,12 +371,12 @@ func (cg *CometGraph) RoundDiff(x, y string) (int, error) {
 //insert comet into db, with comet check and wireInfo if setWireInfo is true.
 func (cg *CometGraph) InsertComet(comet types.Comet, setWireInfo bool) error {
 	b,_:=comet.Body.Marshal()
-	cg.logger.WithFields(logrus.Fields{
-		"Creator":   comet.Creator(),
-		"Marshal":   string(b),
-		"Signature": comet.Signature,
-		"CreatorID":comet.Body.CreatorID,
-	}).Info("InsertComet")
+	cg.logger.
+		Info().
+		Str("Creator",comet.Creator()).
+		Str("Signature",comet.Signature).
+		Int("CreatorID",comet.Body.CreatorID()).Str("MarshalJson",string(b)).
+		Msg("InsertComet")
 	//verify signature
 	if ok, err := comet.Verify(); !ok {
 		if err != nil {
@@ -400,12 +402,13 @@ func (cg *CometGraph) InsertComet(comet types.Comet, setWireInfo bool) error {
 		}
 	}
 
-	cg.logger.WithFields(logrus.Fields{
-		"Creator":   comet.Creator(),
-		"Marshal":   string(b),
-		"Signature": comet.Signature,
-		"CreatorID":comet.Body.CreatorID,
-	}).Info("SetWireInfo")
+	cg.logger.
+		Info().
+		Str("Creator",comet.Creator()).
+		Str("Signature",comet.Signature).
+		Int("CreatorID",comet.Body.CreatorID()).
+		Str("MarshalJson",string(b)).
+		Msg("SetWireInfo")
 
 	if err := cg.InitEventCoordinates(&comet); err != nil {
 		return fmt.Errorf("InitEventCoordinates: %s", err)
@@ -435,43 +438,48 @@ func (cg *CometGraph) recordBlockSignatures(blockSignatures []types.BlockSignatu
 		//check if validator belongs to list of participants
 		validatorHex := fmt.Sprintf("0x%X", bs.Validator)
 		if _, ok := cg.Participants[validatorHex]; !ok {
-			cg.logger.WithFields(logrus.Fields{
-				"index":     bs.Index,
-				"validator": validatorHex,
-			}).Warning("Verifying Block signature. Unknown validator")
+			cg.logger.
+				Warn().
+				Int("index",bs.Index).
+				Str("validator",validatorHex).
+				Msg("Verifying Block signature. Unknown validator")
 			continue
 		}
 
 		block, err := cg.Store.GetBlock(bs.Index)
 		if err != nil {
-			cg.logger.WithFields(logrus.Fields{
-				"index": bs.Index,
-				"msg":   err,
-			}).Warning("Verifying Block signature. Could not fetch Block")
+			cg.logger.
+				Warn().
+				Int("index",bs.Index).
+				Err(err).
+				Msg("Verifying Block signature. Could not fetch Block")
 			continue
 		}
 		valid, err := block.Verify(bs)
 		if err != nil {
-			cg.logger.WithFields(logrus.Fields{
-				"index": bs.Index,
-				"msg":   err,
-			}).Warning("Verifying Block signature")
+			cg.logger.
+				Warn().
+				Int("index",bs.Index).
+				Err(err).
+				Msg("Verifying Block signature")
 			continue
 		}
 		if !valid {
-			cg.logger.WithFields(logrus.Fields{
-				"index": bs.Index,
-			}).Warning("Verifying Block signature. Invalid signature")
+			cg.logger.
+				Warn().
+				Int("index",bs.Index).
+				Msg("Verifying Block signature. Invalid signature")
 			continue
 		}
 
 		block.SetSignature(bs)
 
 		if err := cg.Store.SetBlock(block); err != nil {
-			cg.logger.WithFields(logrus.Fields{
-				"index": bs.Index,
-				"msg":   err,
-			}).Warning("Saving Block")
+			cg.logger.
+				Warn().
+				Int("index",bs.Index).
+				Err(err).
+				Msg("Saving Block")
 		}
 	}
 }

@@ -1,9 +1,10 @@
 package proxy
 
 import (
-	"github.com/sirupsen/logrus"
 	"github.com/paradigm-network/paradigm/types"
 	"github.com/paradigm-network/paradigm/common/crypto"
+	"github.com/rs/zerolog"
+	"github.com/paradigm-network/paradigm/common/log"
 )
 
 //InmemProxy is used for testing
@@ -11,19 +12,15 @@ type InmemAppProxy struct {
 	submitCh              chan []byte
 	stateHash             []byte
 	committedTransactions [][]byte
-	logger                *logrus.Logger
+	logger                *zerolog.Logger
 }
 
-func NewInmemAppProxy(logger *logrus.Logger) *InmemAppProxy {
-	if logger == nil {
-		logger = logrus.New()
-		logger.Level = logrus.DebugLevel
-	}
+func NewInmemAppProxy() *InmemAppProxy {
 	return &InmemAppProxy{
 		submitCh:              make(chan []byte),
 		stateHash:             []byte{},
 		committedTransactions: [][]byte{},
-		logger:                logger,
+		logger:                log.GetLogger("InMemProxy"),
 	}
 }
 
@@ -51,10 +48,10 @@ func (p *InmemAppProxy) SubmitCh() chan []byte {
 }
 
 func (p *InmemAppProxy) CommitBlock(block types.Block) (stateHash []byte, err error) {
-	p.logger.WithFields(logrus.Fields{
-		"round_received": block.RoundReceived(),
-		"txs":            len(block.Transactions()),
-	}).Debug("InmemProxy CommitBlock")
+	p.logger.Info().
+		Int("round_received",block.RoundReceived()).
+		Int("txs",len(block.Transactions())).
+		Msg("InMemProxy CommitBlock")
 	return p.commit(block)
 }
 
