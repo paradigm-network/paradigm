@@ -77,10 +77,13 @@ func access(current, selector, value interface{}, isSet, panics bool) interface{
 		index := -1
 		var err error
 
+		// https://github.com/stretchr/objx/issues/12
 		if strings.Contains(thisSel, "[") {
+
 			arrayMatches := arrayAccesRegex.FindStringSubmatch(thisSel)
 
 			if len(arrayMatches) > 0 {
+
 				// Get the key into the map
 				thisSel = arrayMatches[1]
 
@@ -92,6 +95,7 @@ func access(current, selector, value interface{}, isSet, panics bool) interface{
 					// seriously wrong. Panic.
 					panic("objx: Array index is not an integer.  Must use array[int].")
 				}
+
 			}
 		}
 
@@ -106,8 +110,9 @@ func access(current, selector, value interface{}, isSet, panics bool) interface{
 			if len(selSegs) <= 1 && isSet {
 				curMSI[thisSel] = value
 				return nil
+			} else {
+				current = curMSI[thisSel]
 			}
-			current = curMSI[thisSel]
 		default:
 			current = nil
 		}
@@ -135,7 +140,9 @@ func access(current, selector, value interface{}, isSet, panics bool) interface{
 		}
 
 	}
+
 	return current
+
 }
 
 // intFromInterface converts an interface object to the largest
@@ -167,5 +174,6 @@ func intFromInterface(selector interface{}) int {
 	default:
 		panic("objx: array access argument is not an integer type (this should never happen)")
 	}
+
 	return value
 }

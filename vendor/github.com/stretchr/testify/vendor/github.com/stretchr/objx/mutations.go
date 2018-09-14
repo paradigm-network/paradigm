@@ -2,10 +2,11 @@ package objx
 
 // Exclude returns a new Map with the keys in the specified []string
 // excluded.
-func (m Map) Exclude(exclude []string) Map {
+func (d Map) Exclude(exclude []string) Map {
+
 	excluded := make(Map)
-	for k, v := range m {
-		var shouldInclude = true
+	for k, v := range d {
+		var shouldInclude bool = true
 		for _, toExclude := range exclude {
 			if k == toExclude {
 				shouldInclude = false
@@ -16,6 +17,7 @@ func (m Map) Exclude(exclude []string) Map {
 			excluded[k] = v
 		}
 	}
+
 	return excluded
 }
 
@@ -36,16 +38,19 @@ func (m Map) Merge(merge Map) Map {
 	return m.Copy().MergeHere(merge)
 }
 
-// MergeHere blends the specified map with this map and returns the current map.
+// Merge blends the specified map with this map and returns the current map.
 //
-// Keys that appear in both will be selected from the specified map. The original map
+// Keys that appear in both will be selected from the specified map.  The original map
 // will be modified. This method requires that
 // the wrapped object be a map[string]interface{}
 func (m Map) MergeHere(merge Map) Map {
+
 	for k, v := range merge {
 		m[k] = v
 	}
+
 	return m
+
 }
 
 // Transform builds a new Obj giving the transformer a chance
@@ -66,9 +71,11 @@ func (m Map) Transform(transformer func(key string, value interface{}) (string, 
 // This method requires that the wrapped object be a map[string]interface{}
 func (m Map) TransformKeys(mapping map[string]string) Map {
 	return m.Transform(func(key string, value interface{}) (string, interface{}) {
+
 		if newKey, ok := mapping[key]; ok {
 			return newKey, value
 		}
+
 		return key, value
 	})
 }

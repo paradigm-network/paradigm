@@ -1,7 +1,6 @@
 package core
 
 import (
-	"github.com/sirupsen/logrus"
 	"time"
 	"io/ioutil"
 )
@@ -45,8 +44,6 @@ func NewConfig(
 }
 
 func DefaultConfig() *Config {
-	logger := logrus.New()
-	logger.Level = logrus.DebugLevel
 	storeType := "badger"
 	storePath, _ := ioutil.TempDir("", "pdm_badger_store")
 	return &Config{
