@@ -9,9 +9,6 @@ import (
 // key.
 func HashWithKey(data, key string) string {
 	hash := sha1.New()
-	_, err := hash.Write([]byte(data + ":" + key))
-	if err != nil {
-		return ""
-	}
+	hash.Write([]byte(data + ":" + key))
 	return hex.EncodeToString(hash.Sum(nil))
 }

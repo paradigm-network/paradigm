@@ -6,11 +6,12 @@ import (
 	"sort"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/paradigm-network/paradigm/common/crypto"
 	"github.com/paradigm-network/paradigm/core/sequentia"
 	"github.com/paradigm-network/paradigm/types"
 	"github.com/paradigm-network/paradigm/storage"
+	"github.com/paradigm-network/paradigm/common/log"
+	"github.com/rs/zerolog"
 )
 
 type Core struct {
@@ -28,7 +29,7 @@ type Core struct {
 	transactionPool    [][]byte
 	blockSignaturePool []types.BlockSignature
 
-	logger *logrus.Logger
+	logger *zerolog.Logger
 }
 
 func NewCore(
@@ -37,11 +38,7 @@ func NewCore(
 	participants map[string]int,
 	store storage.Store,
 	commitCh chan types.Block,
-	logger *logrus.Logger) Core {
-	if logger == nil {
-		logger = logrus.New()
-		logger.Level = logrus.DebugLevel
-	}
+	) Core {
 
 	reverseParticipants := make(map[int]string)
 	for pk, id := range participants {
@@ -51,12 +48,12 @@ func NewCore(
 	core := Core{
 		id:                  id,
 		key:                 key,
-		cg:                  sequentia.BuildCometGraph(participants, store, commitCh,logger),
+		cg:                  sequentia.BuildCometGraph(participants, store, commitCh),
 		participants:        participants,
 		reverseParticipants: reverseParticipants,
 		transactionPool:     [][]byte{},
 		blockSignaturePool:  []types.BlockSignature{},
-		logger:              logger,
+		logger:              log.GetLogger("Core"),
 	}
 	return core
 }
@@ -90,9 +87,11 @@ func (c *Core) Init() error {
 	//restarted it will initialize the same Event. cf. github issues 19 and 10
 	initialEvent.Body.Timestamp = time.Time{}.UTC()
 	err := c.SignAndInsertSelfEvent(initialEvent)
-	c.logger.WithFields(logrus.Fields{
-		"index": initialEvent.Index(),
-		"hash":  initialEvent.Hex()}).Debug("Initial Event")
+
+	c.logger.Info().
+		Int("index",initialEvent.Index()).
+		Str("hash",initialEvent.Hex()).
+		Msg("Initial Event")
 	return err
 }
 
@@ -218,12 +217,9 @@ func (c *Core) EventDiff(known map[int]int) (events []types.Comet, err error) {
 
 func (c *Core) Sync(unknownEvents []types.WireEvent) error {
 
-	c.logger.WithFields(logrus.Fields{
-		"unknown_events":       len(unknownEvents),
-		"transaction_pool":     len(c.transactionPool),
-		"block_signature_pool": len(c.blockSignaturePool),
-	}).Debug("Sync")
-
+	c.logger.Info().Int("unknown_events",len(unknownEvents)).
+		Int("transaction_pool",len(c.transactionPool)).
+		Int("block_signature_pool",len(c.blockSignaturePool)).Msg("Sync")
 	otherHead := ""
 	//add unknown events
 	for k, we := range unknownEvents {
@@ -265,7 +261,7 @@ func (c *Core) Sync(unknownEvents []types.WireEvent) error {
 
 func (c *Core) AddSelfEvent() error {
 	if len(c.transactionPool) == 0 && len(c.blockSignaturePool) == 0 {
-		c.logger.Debug("Empty transaction pool and block signature pool")
+		c.logger.Info().Msg("Empty transaction pool and block signature pool")
 		return nil
 	}
 
@@ -280,11 +276,10 @@ func (c *Core) AddSelfEvent() error {
 		return fmt.Errorf("Error inserting new head: %s", err)
 	}
 
-	c.logger.WithFields(logrus.Fields{
-		"transactions":     len(c.transactionPool),
-		"block_signatures": len(c.blockSignaturePool),
-	}).Debug("Created Self-Event")
-
+	c.logger.Info().
+		Int("transactions",len(c.transactionPool)).
+		Int("block_signatures",len(c.blockSignaturePool)).
+		Msg("Created Self-Event")
 	c.transactionPool = [][]byte{}
 	c.blockSignaturePool = []types.BlockSignature{}
 
@@ -314,25 +309,25 @@ func (c *Core) ToWire(events []types.Comet) ([]types.WireEvent, error) {
 func (c *Core) RunConsensus() error {
 	start := time.Now()
 	err := c.cg.DivideRounds()
-	c.logger.WithField("duration", time.Since(start).Nanoseconds()).Debug("DivideRounds()")
+	c.logger.Info().Int64("duration",time.Since(start).Nanoseconds()).Msg("DivideRounds()")
 	if err != nil {
-		c.logger.WithField("error", err).Error("DivideRounds")
+		c.logger.Error().Err(err).Msg("DivideRounds")
 		return err
 	}
 
 	start = time.Now()
 	err = c.cg.DecideFame()
-	c.logger.WithField("duration", time.Since(start).Nanoseconds()).Debug("DecideFame()")
+	c.logger.Info().Int64("duration",time.Since(start).Nanoseconds()).Msg("DecideFame()")
 	if err != nil {
-		c.logger.WithField("error", err).Error("DecideFame")
+		c.logger.Error().Err(err).Msg("DecideFame")
 		return err
 	}
 
 	start = time.Now()
 	err = c.cg.FindOrder()
-	c.logger.WithField("duration", time.Since(start).Nanoseconds()).Debug("FindOrder()")
+	c.logger.Info().Int64("duration",time.Since(start).Nanoseconds()).Msg("FindOrder()")
 	if err != nil {
-		c.logger.WithField("error", err).Error("FindOrder")
+		c.logger.Error().Err(err).Msg("FindOrder")
 		return err
 	}
 

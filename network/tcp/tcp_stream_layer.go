@@ -2,7 +2,6 @@ package tcp
 
 import (
 	"errors"
-	"github.com/sirupsen/logrus"
 	"net"
 	"time"
 )
@@ -49,10 +48,9 @@ func NewTCPTransport(
 	advertise net.Addr,
 	maxPool int,
 	timeout time.Duration,
-	logger *logrus.Logger,
 ) (*NetworkTransport, error) {
 	return newTCPTransport(bindAddr, advertise, maxPool, timeout, func(stream StreamLayer) *NetworkTransport {
-		return NewNetworkTransport(stream, maxPool, timeout, logger)
+		return NewNetworkTransport(stream, maxPool, timeout)
 	})
 }
 
