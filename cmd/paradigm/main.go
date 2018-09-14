@@ -169,6 +169,7 @@ func printVersion(c *cli.Context) error {
 }
 
 func run(c *cli.Context) error {
+	fmt.Println("Paradigm Starting...")
 	onlyAccretion := c.Bool(OnlyAccretion.Name)
 	datadir := c.String(DataDirFlag.Name)
 	addr := c.String(NodeAddressFlag.Name)
@@ -185,6 +186,7 @@ func run(c *cli.Context) error {
 	syncLimit := c.Int(SyncLimitFlag.Name)
 	storeType := c.String(StoreFlag.Name)
 	storePath := c.String(StorePathFlag.Name)
+	log.InitRotateWriter(datadir + "/paradigm.log")
 	logger := log.GetLogger("Main")
 	logger.Info().Interface(
 		"only_accretion", onlyAccretion).Interface(
@@ -288,7 +290,6 @@ func run(c *cli.Context) error {
 	//go serviceServer.Serve()
 
 	node.Run(true)
-
 	return nil
 }
 

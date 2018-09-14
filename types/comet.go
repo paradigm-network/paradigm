@@ -183,9 +183,7 @@ func (e *Comet) Sign(privKey *ecdsa.PrivateKey) error {
 func (e *Comet) Verify() (bool, error) {
 	pubBytes := e.Body.Creator
 	pubKey := crypto.ToECDSAPub(pubBytes)
-	fmt.Printf("Verify:pubBytes=%+v,key=%s\n", pubBytes, pubKey)
 	signBytes, err := e.Body.Hash()
-	fmt.Printf("Verify:signBytes=%+v\n", signBytes)
 	if err != nil {
 		return false, err
 	}
