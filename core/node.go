@@ -63,7 +63,7 @@ func NewNode(conf *Config,
 	pmap, _ := store.Participants()
 
 	commitCh := make(chan types.Block, 400)
-	core := NewCore(id, key, pmap, store, commitCh, conf.Logger)
+	core := NewCore(id, key, pmap, store, commitCh)
 
 	peerSelector := sequentia.NewRandomPeerSelector(participants, localAddr)
 
