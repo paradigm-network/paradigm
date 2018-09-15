@@ -1,7 +1,7 @@
 package crypto
 
 import (
-	"paradigm/crypto/sha3"
+	"paradigm/common/crypto/sha3"
 	"crypto/ecdsa"
 	"paradigm/common"
 	"crypto/elliptic"

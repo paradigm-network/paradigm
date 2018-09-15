@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"io/ioutil"
 	"io"
-	"paradigm/crypto"
+	"paradigm/common/crypto"
 	"time"
 	"encoding/hex"
 	"fmt"

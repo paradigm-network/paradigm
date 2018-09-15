@@ -3,13 +3,13 @@ package keystore
 import (
 	"paradigm/common"
 	"paradigm/accounts"
-	"paradigm/event"
+	"paradigm/common/event"
 	"sync"
 	"path/filepath"
 	"errors"
 	"crypto/ecdsa"
 	"runtime"
-	"paradigm/crypto"
+	"paradigm/common/crypto"
 	"math/big"
 	"paradigm/core/types"
 )

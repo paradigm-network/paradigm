@@ -9,7 +9,6 @@ import (
 )
 
 
-//看注释它实现了谁
 // S256 returns an instance of the secp256k1 curve.
 func S256() elliptic.Curve {
 	return secp256k1.S256()//
