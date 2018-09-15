@@ -278,7 +278,6 @@ func run(c *cli.Context) error {
 	var prox proxy.AppProxy
 	prox = proxy.NewInmemAppProxy()
 	//todo impl. if no_client
-
 	node := core.NewNode(conf, nodeID, key, peers, store, trans, prox)
 	if err := node.Init(needBootstrap); err != nil {
 		return cli.NewExitError(
@@ -286,7 +285,7 @@ func run(c *cli.Context) error {
 			1)
 	}
 
-	//serviceServer := service.NewService(serviceAddress, node, logger)
+	//serviceServer := service.NewService(serviceAddress, node)
 	//go serviceServer.Serve()
 
 	node.Run(true)

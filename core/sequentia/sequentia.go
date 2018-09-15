@@ -651,7 +651,7 @@ func (cg *CometGraph) SetWireInfo(comet *types.Comet) error {
 }
 
 func (cg *CometGraph) ReadWireInfo(wevent types.WireEvent) (*types.Comet, error) {
-	fmt.Printf("ReadWireInfo:wevent=%+v\n",wevent)
+	//fmt.Printf("ReadWireInfo:wevent=%+v\n",wevent)
 	selfParent := ""
 	otherParent := ""
 	var err error
@@ -850,7 +850,7 @@ func (cg *CometGraph) DecideRoundReceived() error {
 			}
 
 			//skip if some witnesses are left undecided
-			if !(tr.WitnessesDecided() && cg.UndecidedRounds[0] > i) {
+			if !(tr.WitnessesDecided() && len(cg.UndecidedRounds) > 0 && cg.UndecidedRounds[0] > i) {
 				continue
 			}
 

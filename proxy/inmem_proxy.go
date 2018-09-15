@@ -5,6 +5,8 @@ import (
 	"github.com/paradigm-network/paradigm/common/crypto"
 	"github.com/rs/zerolog"
 	"github.com/paradigm-network/paradigm/common/log"
+	"github.com/paradigm-network/paradigm/storage"
+	"time"
 )
 
 //InmemProxy is used for testing
@@ -13,15 +15,24 @@ type InmemAppProxy struct {
 	stateHash             []byte
 	committedTransactions [][]byte
 	logger                *zerolog.Logger
+	store                 *storage.Store
 }
 
 func NewInmemAppProxy() *InmemAppProxy {
-	return &InmemAppProxy{
+	proxy:= &InmemAppProxy{
 		submitCh:              make(chan []byte),
 		stateHash:             []byte{},
 		committedTransactions: [][]byte{},
 		logger:                log.GetLogger("InMemProxy"),
 	}
+	go func() {
+		for  {
+			proxy.SubmitTx([]byte("aaa"))
+			time.Sleep(time.Second)
+		}
+	}()
+
+	return proxy
 }
 
 func (iap *InmemAppProxy) commit(block types.Block) ([]byte, error) {
@@ -49,8 +60,8 @@ func (p *InmemAppProxy) SubmitCh() chan []byte {
 
 func (p *InmemAppProxy) CommitBlock(block types.Block) (stateHash []byte, err error) {
 	p.logger.Info().
-		Int("round_received",block.RoundReceived()).
-		Int("txs",len(block.Transactions())).
+		Int("round_received", block.RoundReceived()).
+		Int("txs", len(block.Transactions())).
 		Msg("InMemProxy CommitBlock")
 	return p.commit(block)
 }
