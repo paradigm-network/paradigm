@@ -180,6 +180,7 @@ func (n *Node) startGossipTimer(gossip bool) {
 				}
 			}
 			if !n.core.NeedGossip() {
+				n.logger.Info().Msg("Gossip controlTimer stopped, because NeedGossip=false!")
 				n.controlTimer.StopCh <- struct{}{}
 			} else if !n.controlTimer.Set {
 				n.controlTimer.ResetCh <- struct{}{}
@@ -428,7 +429,7 @@ func (n *Node) push(peerAddr string, knownEvents map[int]int) error {
 	start = time.Now()
 	resp2, err := n.requestEagerSync(peerAddr, wireEvents)
 	elapsed = time.Since(start)
-	n.logger.Info().Int64("duration", elapsed.Nanoseconds()).Msg("requestEagerSync()")
+	n.logger.Info().Int64("duration", elapsed.Nanoseconds()).Interface("request_wireEvent", wireEvents).Interface("response", resp2).Msg("requestEagerSync()")
 	if err != nil {
 		n.logger.Error().Err(err).Msg("requestEagerSync()")
 		return err

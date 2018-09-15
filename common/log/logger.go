@@ -26,7 +26,6 @@ func GetConsoleLogger(component string) *zerolog.Logger {
 	return &logger
 }
 
-
 func GetLogger(component string) *zerolog.Logger {
 	if Writer == nil {
 		fmt.Println("Please init RotateWriter first.")

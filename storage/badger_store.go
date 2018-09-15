@@ -46,10 +46,11 @@ func NewBadgerStore(participants map[string]int, cacheSize int, path string) (*B
 		path:         path,
 		logger:       log.GetLogger("badger"),
 	}
+
 	if err := store.dbSetParticipants(participants); err != nil {
 		return nil, err
 	}
-	store.logger.Info().Interface("rootsMap",inmemStore.roots).Msg("NewBadgerStore:dbSetRoots")
+	store.logger.Info().Interface("rootsMap", inmemStore.roots).Msg("NewBadgerStore:dbSetRoots")
 	if err := store.dbSetRoots(inmemStore.roots); err != nil {
 		return nil, err
 	}
@@ -72,8 +73,9 @@ func LoadBadgerStore(cacheSize int, path string) (*BadgerStore, error) {
 		return nil, err
 	}
 	store := &BadgerStore{
-		db:   handle,
-		path: path,
+		db:     handle,
+		path:   path,
+		logger: log.GetLogger("badger"),
 	}
 
 	participants, err := store.dbGetParticipants()
@@ -447,7 +449,7 @@ func (s *BadgerStore) dbSetRoots(roots map[string]types.Root) error {
 			return err
 		}
 		key := participantRootKey(participant)
-		s.logger.Info().Str("participant",participant).Str("key",string(key)).Msg("dbSetRoots")
+		s.logger.Info().Str("participant", participant).Str("key", string(key)).Msg("dbSetRoots")
 		//insert [participant_root] => [root bytes]
 		if err := tx.Set(key, val); err != nil {
 			return err
@@ -526,6 +528,7 @@ func (s *BadgerStore) dbGetParticipants() (map[string]int, error) {
 	res := make(map[string]int)
 	err := s.db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
 		prefix := []byte(participantPrefix)
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
