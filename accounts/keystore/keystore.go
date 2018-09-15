@@ -9,21 +9,19 @@ import (
 	"errors"
 	"crypto/ecdsa"
 	"runtime"
+	"paradigm/crypto"
+	"math/big"
+	"paradigm/core/types"
 )
 
-
-
-var(
-	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
+var (
 	ErrLocked  = accounts.NewAuthNeededError("password or unlock")
-
+	ErrNoMatch = errors.New("no key for given address or file")
+	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
 )
-
 
 // KeyStoreScheme is the protocol scheme prefixing account and wallet URLs.
 var KeyStoreScheme = "keystore"
-
-
 
 // KeyStore manages a key storage directory on disk.
 type KeyStore struct {
@@ -54,7 +52,6 @@ func NewKeyStore(keydir string, scryptN, scryptP int) *KeyStore {
 	return ks
 }
 
-
 func (ks *KeyStore) init(keydir string) {
 	// Lock the mutex since the account cache might call back with events
 	ks.mu.Lock()
@@ -78,8 +75,6 @@ func (ks *KeyStore) init(keydir string) {
 	}
 }
 
-
-
 // zeroKey zeroes a private key in memory.
 func zeroKey(k *ecdsa.PrivateKey) {
 	b := k.D.Bits()
@@ -87,7 +82,6 @@ func zeroKey(k *ecdsa.PrivateKey) {
 		b[i] = 0
 	}
 }
-
 
 // SignHash calculates a ECDSA signature for the given hash. The produced
 // signature is in the [R || S || V] format where V is 0 or 1.
@@ -102,4 +96,67 @@ func (ks *KeyStore) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
 	}
 	// Sign the hash using plain ECDSA operations
 	return crypto.Sign(hash, unlockedKey.PrivateKey)
+}
+
+// SignTx signs the given transaction with the requested account.
+func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	// Look up the key to sign with and abort if it cannot be found
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+
+	unlockedKey, found := ks.unlocked[a.Address]
+	if !found {
+		return nil, ErrLocked
+	}
+	// Depending on the presence of the chain ID, sign with EIP155 or homestead
+	if chainID != nil {
+		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey)
+	}
+	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey)
+}
+
+// SignHashWithPassphrase signs hash if the private key matching the given address
+// can be decrypted with the given passphrase. The produced signature is in the
+// [R || S || V] format where V is 0 or 1.
+func (ks *KeyStore) SignHashWithPassphrase(a accounts.Account, passphrase string, hash []byte) (signature []byte, err error) {
+	_, key, err := ks.getDecryptedKey(a, passphrase)
+	if err != nil {
+		return nil, err
+	}
+	defer zeroKey(key.PrivateKey)
+	return crypto.Sign(hash, key.PrivateKey)
+}
+
+func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.Account, *Key, error) {
+	a, err := ks.Find(a)
+	if err != nil {
+		return a, nil, err
+	}
+	key, err := ks.storage.GetKey(a.Address, a.URL.Path, auth)
+	return a, key, err
+}
+
+// Find resolves the given account into a unique entry in the keystore.
+func (ks *KeyStore) Find(a accounts.Account) (accounts.Account, error) {
+	ks.cache.maybeReload()
+	ks.cache.mu.Lock()
+	a, err := ks.cache.find(a)
+	ks.cache.mu.Unlock()
+	return a, err
+}
+
+// SignTxWithPassphrase signs the transaction if the private key matching the
+// given address can be decrypted with the given passphrase.
+func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	_, key, err := ks.getDecryptedKey(a, passphrase)
+	if err != nil {
+		return nil, err
+	}
+	defer zeroKey(key.PrivateKey)
+
+	// Depending on the presence of the chain ID, sign with EIP155 or homestead
+	if chainID != nil {
+		return types.SignTx(tx, types.NewEIP155Signer(chainID), key.PrivateKey)
+	}
+	return types.SignTx(tx, types.HomesteadSigner{}, key.PrivateKey)
 }

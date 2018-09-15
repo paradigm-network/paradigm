@@ -17,8 +17,6 @@ func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
 	return outText, err
 }
 
-
-
 func aesCBCDecrypt(key, cipherText, iv []byte) ([]byte, error) {
 	aesBlock, err := aes.NewCipher(key)
 	if err != nil {
@@ -33,8 +31,6 @@ func aesCBCDecrypt(key, cipherText, iv []byte) ([]byte, error) {
 	}
 	return plaintext, err
 }
-
-
 
 // From https://leanpub.com/gocrypto/read#leanpub-auto-block-cipher-modes
 func pkcs7Unpad(in []byte) []byte {
