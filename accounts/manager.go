@@ -3,7 +3,7 @@ package accounts
 import (
 	"reflect"
 	"sync"
-	"paradigm/event"
+	"paradigm/common/event"
 	"sort"
 )
 

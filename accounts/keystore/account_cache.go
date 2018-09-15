@@ -12,12 +12,20 @@ import (
 
 	"paradigm/log"
 	"sort"
+	"strings"
+	"path/filepath"
+	"fmt"
 )
+
+// Minimum amount of time between cache reloads. This limit applies if the platform does
+// not support change notifications. It also applies if the keystore directory does not
+// exist yet, the code will attempt to create a watcher at most this often.
+const minReloadInterval = 2 * time.Second
 
 // accountCache is a live index of all accounts in the keystore.
 type accountCache struct {
-	keydir   string
-	watcher  *watcher
+	keydir string
+	//watcher  *watcher
 	mu       sync.Mutex
 	all      accountsByURL
 	byAddr   map[common.Address][]accounts.Account
@@ -28,7 +36,9 @@ type accountCache struct {
 
 type accountsByURL []accounts.Account
 
-
+func (s accountsByURL) Len() int           { return len(s) }
+func (s accountsByURL) Less(i, j int) bool { return s[i].URL.Cmp(s[j].URL) < 0 }
+func (s accountsByURL) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
 func newAccountCache(keydir string) (*accountCache, chan struct{}) {
 	ac := &accountCache{
@@ -37,15 +47,13 @@ func newAccountCache(keydir string) (*accountCache, chan struct{}) {
 		notify: make(chan struct{}, 1),
 		fileC:  fileCache{all: set.NewNonTS()},
 	}
-	ac.watcher = newWatcher(ac)
+	//ac.watcher = newWatcher(ac)
 	return ac, ac.notify
 }
 
-
-
 func (ac *accountCache) close() {
 	ac.mu.Lock()
-	ac.watcher.close()
+	//ac.watcher.close()
 	if ac.throttle != nil {
 		ac.throttle.Stop()
 	}
@@ -56,9 +64,6 @@ func (ac *accountCache) close() {
 	ac.mu.Unlock()
 }
 
-
-
-
 func (ac *accountCache) accounts() []accounts.Account {
 	ac.maybeReload()
 	ac.mu.Lock()
@@ -68,15 +73,14 @@ func (ac *accountCache) accounts() []accounts.Account {
 	return cpy
 }
 
-
-
 func (ac *accountCache) maybeReload() {
 	ac.mu.Lock()
 
-	if ac.watcher.running {
-		ac.mu.Unlock()
-		return // A watcher is running and will keep the cache up-to-date.
-	}
+	//if ac.watcher.running {
+	//	ac.mu.Unlock()
+	//	return // A watcher is running and will keep the cache up-to-date.
+	//}
+
 	if ac.throttle == nil {
 		ac.throttle = time.NewTimer(0)
 	} else {
@@ -88,13 +92,11 @@ func (ac *accountCache) maybeReload() {
 		}
 	}
 	// No watcher running, start it.
-	ac.watcher.start()
-	ac.throttle.Reset(minReloadInterval)
+	//ac.watcher.start()
+	ac.throttle.Reset(minReloadInterval) //-------------------------------------dao
 	ac.mu.Unlock()
 	ac.scanAccounts()
 }
-
-
 
 // scanAccounts checks if any changes have occurred on the filesystem, and
 // updates the account cache accordingly
@@ -112,8 +114,8 @@ func (ac *accountCache) scanAccounts() error {
 	var (
 		buf = new(bufio.Reader)
 		key struct {
-			   Address string `json:"address"`
-		   }
+				Address string `json:"address"`
+			}
 	)
 	readAccount := func(path string) *accounts.Account {
 		fd, err := os.Open(path)
@@ -165,8 +167,6 @@ func (ac *accountCache) scanAccounts() error {
 	return nil
 }
 
-
-
 func (ac *accountCache) add(newAccount accounts.Account) {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
@@ -181,7 +181,6 @@ func (ac *accountCache) add(newAccount accounts.Account) {
 	ac.all[i] = newAccount
 	ac.byAddr[newAccount.Address] = append(ac.byAddr[newAccount.Address], newAccount)
 }
-
 
 // deleteByFile removes an account referenced by the given path.
 func (ac *accountCache) deleteByFile(path string) {
@@ -200,7 +199,6 @@ func (ac *accountCache) deleteByFile(path string) {
 	}
 }
 
-
 func removeAccount(slice []accounts.Account, elem accounts.Account) []accounts.Account {
 	for i := range slice {
 		if slice[i] == elem {
@@ -210,23 +208,56 @@ func removeAccount(slice []accounts.Account, elem accounts.Account) []accounts.A
 	return slice
 }
 
+// find returns the cached account for address if there is a unique match.
+// The exact matching rules are explained by the documentation of accounts.Account.
+// Callers must hold ac.mu.
+func (ac *accountCache) find(a accounts.Account) (accounts.Account, error) {
+	// Limit search to address candidates if possible.
+	matches := ac.all
+	if (a.Address != common.Address{}) {
+		matches = ac.byAddr[a.Address]
+	}
+	if a.URL.Path != "" {
+		// If only the basename is specified, complete the path.
+		if !strings.ContainsRune(a.URL.Path, filepath.Separator) {
+			a.URL.Path = filepath.Join(ac.keydir, a.URL.Path)
+		}
+		for i := range matches {
+			if matches[i].URL == a.URL {
+				return matches[i], nil
+			}
+		}
+		if (a.Address == common.Address{}) {
+			return accounts.Account{}, ErrNoMatch
+		}
+	}
+	switch len(matches) {
+	case 1:
+		return matches[0], nil
+	case 0:
+		return accounts.Account{}, ErrNoMatch
+	default:
+		err := &AmbiguousAddrError{Addr: a.Address, Matches: make([]accounts.Account, len(matches))}
+		copy(err.Matches, matches)
+		sort.Sort(accountsByURL(err.Matches))
+		return accounts.Account{}, err
+	}
+}
 
+// AmbiguousAddrError is returned when attempting to unlock
+// an address for which more than one file exists.
+type AmbiguousAddrError struct {
+	Addr    common.Address
+	Matches []accounts.Account
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+func (err *AmbiguousAddrError) Error() string {
+	files := ""
+	for i, a := range err.Matches {
+		files += a.URL.Path
+		if i < len(err.Matches)-1 {
+			files += ", "
+		}
+	}
+	return fmt.Sprintf("multiple keys match address (%s)", files)
+}

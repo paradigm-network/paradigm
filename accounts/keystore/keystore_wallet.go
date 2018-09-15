@@ -13,8 +13,6 @@ type keystoreWallet struct {
 	keystore *KeyStore        // Keystore where the account originates from
 }
 
-
-
 // URL implements accounts.Wallet, returning the URL of the account within.
 func (w *keystoreWallet) URL() accounts.URL {
 	return w.account.URL
@@ -57,8 +55,6 @@ func (w *keystoreWallet) Contains(account accounts.Account) bool {
 func (w *keystoreWallet) Derive(path accounts.DerivationPath, pin bool) (accounts.Account, error) {
 	return accounts.Account{}, accounts.ErrNotSupported
 }
-
-
 
 // SignHash implements accounts.Wallet, attempting to sign the given hash with
 // the given account. If the wallet does not wrap this particular account, an
@@ -119,26 +115,3 @@ func (w *keystoreWallet) SignTxWithPassphrase(account accounts.Account, passphra
 	// Account seems valid, request the keystore to sign
 	return w.keystore.SignTxWithPassphrase(account, passphrase, tx, chainID)
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

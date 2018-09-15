@@ -12,8 +12,8 @@ import (
 	"golang.org/x/crypto/scrypt"
 	"crypto/aes"
 	"paradigm/common/math"
-	"paradigm/crypto/randentropy"
-	"paradigm/crypto"
+	"paradigm/common/crypto/randentropy"
+	"paradigm/common/crypto"
 	"golang.org/x/crypto/pbkdf2"
 	"crypto/sha256"
 	crand "crypto/rand"
@@ -67,9 +67,6 @@ func (ks keyStorePassphrase) JoinPath(filename string) string {
 	return filepath.Join(ks.keysDirPath, filename)
 }
 
-
-
-
 // DecryptKey decrypts a key from a json blob, returning the private key itself.
 func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	// Parse the json into a simple map to fetch the key version
@@ -107,9 +104,6 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		PrivateKey: key,
 	}, nil
 }
-
-
-
 
 // EncryptKey encrypts a key using the specified scrypt parameters into a json
 // blob that can be decrypted later on.
@@ -158,15 +152,11 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 	return json.Marshal(encryptedKeyJSONV3)
 }
 
-
-
 // StoreKey generates a key, encrypts with 'auth' and stores in the given directory
 func StoreKey(dir, auth string, scryptN, scryptP int) (common.Address, error) {
 	_, a, err := storeNewKey(&keyStorePassphrase{dir, scryptN, scryptP}, crand.Reader, auth)
 	return a.Address, err
 }
-
-
 
 func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
 	key, err := newKey(rand)
@@ -180,9 +170,6 @@ func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Accou
 	}
 	return key, a, err
 }
-
-
-
 
 func decryptKeyV1(keyProtected *encryptedKeyJSONV1, auth string) (keyBytes []byte, keyId []byte, err error) {
 	keyId = uuid.Parse(keyProtected.Id)
@@ -217,10 +204,6 @@ func decryptKeyV1(keyProtected *encryptedKeyJSONV1, auth string) (keyBytes []byt
 	}
 	return plainText, keyId, err
 }
-
-
-
-
 
 func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byte, keyId []byte, err error) {
 	if keyProtected.Version != version {
@@ -264,8 +247,6 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 	return plainText, keyId, err
 }
 
-
-
 func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
 	authArray := []byte(auth)
 	salt, err := hex.DecodeString(cryptoJSON.KDFParams["salt"].(string))
@@ -292,8 +273,6 @@ func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
 
 	return nil, fmt.Errorf("Unsupported KDF: %s", cryptoJSON.KDF)
 }
-
-
 
 // TODO: can we do without this when unmarshalling dynamic JSON?
 // why do integers in KDF params end up as float64 and not int after

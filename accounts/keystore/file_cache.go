@@ -18,8 +18,6 @@ type fileCache struct {
 	mu      sync.RWMutex
 }
 
-
-
 // scan performs a new scan on the given directory, compares against the already
 // cached filenames, and returns file sets: creates, deletes, updates.
 func (fc *fileCache) scan(keyDir string) (set.Interface, set.Interface, set.Interface, error) {
@@ -72,7 +70,6 @@ func (fc *fileCache) scan(keyDir string) (set.Interface, set.Interface, set.Inte
 	log.Debug("FS scan times", "list", t1.Sub(t0), "set", t2.Sub(t1), "diff", t3.Sub(t2))
 	return creates, deletes, updates, nil
 }
-
 
 // skipKeyFile ignores editor backups, hidden files and folders/symlinks.
 func skipKeyFile(fi os.FileInfo) bool {

@@ -5,22 +5,17 @@ import (
 	"fmt"
 )
 
-
-
 // ErrUnknownWallet is returned for any requested operation for which no backend
 // provides the specified wallet.
 var ErrUnknownWallet = errors.New("unknown wallet")
-
 
 // ErrUnknownAccount is returned for any requested operation for which no backend
 // provides the specified account.
 var ErrUnknownAccount = errors.New("unknown account")
 
-
 // ErrNotSupported is returned when an operation is requested from an account
 // backend that it does not support.
 var ErrNotSupported = errors.New("not supported")
-
 
 // NewAuthNeededError creates a new authentication error with the extra details
 // about the needed fields set.
