@@ -24,4 +24,9 @@ type Store interface {
 	SetBlock(types.Block) error
 	Reset(map[string]types.Root) error
 	Close() error
+
+	//tire
+	Get(key []byte) (value []byte, err error)
+	Has(key []byte) (bool, error)
+	Put(key, value []byte) error
 }

@@ -606,6 +606,46 @@ func (s *BadgerStore) dbSetBlock(block types.Block) error {
 	return tx.Commit(nil)
 }
 
+func (s *BadgerStore) Get(key []byte) (value []byte, err error) {
+	err = s.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+		value, err = item.Value()
+		return err
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return
+}
+func (s *BadgerStore) Has(key []byte) (has bool, err error) {
+	err = s.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+		has = item.EstimatedSize() != 0
+		return err
+	})
+
+	if err != nil {
+		return false, err
+	}
+	return
+}
+func (s *BadgerStore) Put(key, value []byte) error {
+	tx := s.db.NewTransaction(true)
+	defer tx.Discard()
+
+	if err := tx.Set(key, value); err != nil {
+		return err
+	}
+	return tx.Commit(nil)
+}
+
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 func isDBKeyNotFound(err error) bool {
