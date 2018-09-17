@@ -13,13 +13,12 @@ const (
 	AddressLength = 20
 	HashLength    = 32
 )
-var (
-	hashT    = reflect.TypeOf(Hash{})
-	addressT = reflect.TypeOf(Address{})
-)
 
 // Address represents the 20 byte address of an Paradigm account.
 type Address [AddressLength]byte
+// Hash represents the 32 byte Keccak256 hash of arbitrary data.
+type Hash [HashLength]byte
+
 
 // BytesToAddress returns Address with value b.
 // If b is larger than len(h), b will be cropped from the left.
@@ -28,16 +27,6 @@ func BytesToAddress(b []byte) Address {
 	a.SetBytes(b)
 	return a
 }
-
-// Hash represents the 32 byte Keccak256 hash of arbitrary data.
-type Hash [HashLength]byte
-
-func BytesToHash(b []byte) Hash {
-	var h Hash
-	h.SetBytes(b)
-	return h
-}
-
 
 // SetBytes sets the address to the value of b.
 // If b is larger than len(a) it will panic.
@@ -49,6 +38,25 @@ func (a *Address) SetBytes(b []byte) {
 }
 
 func HexToAddress(s string) Address { return BytesToAddress(FromHex(s)) }
+
+
+
+var (
+	hashT    = reflect.TypeOf(Hash{})
+	addressT = reflect.TypeOf(Address{})
+)
+
+
+func BytesToHash(b []byte) Hash {
+	var h Hash
+	h.SetBytes(b)
+	return h
+}
+
+
+
+
+
 func StringToHash(s string) Hash { return BytesToHash([]byte(s)) }
 func BigToHash(b *big.Int) Hash  { return BytesToHash(b.Bytes()) }
 func HexToHash(s string) Hash    { return BytesToHash(FromHex(s)) }

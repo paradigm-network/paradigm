@@ -38,8 +38,6 @@ func GetLogger(component string) *zerolog.Logger {
 	return &logger
 }
 
-
-
 const timeKey = "t"
 const lvlKey = "lvl"
 const msgKey = "msg"
