@@ -6,7 +6,7 @@ import (
 	"gopkg.in/fatih/set.v0"
 	"path/filepath"
 	"io/ioutil"
-	"paradigm/log"
+	"github.com/paradigm-network/paradigm/common/log"
 	"os"
 	"strings"
 )
