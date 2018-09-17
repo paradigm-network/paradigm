@@ -26,8 +26,10 @@ func NewInmemAppProxy() *InmemAppProxy {
 		logger:                log.GetLogger("InMemProxy"),
 	}
 	go func() {
+		var a = 0
 		for  {
-			proxy.SubmitTx([]byte("aaa"))
+			a=a+1
+			proxy.SubmitTx([]byte(string(a)))
 			time.Sleep(time.Second)
 		}
 	}()
