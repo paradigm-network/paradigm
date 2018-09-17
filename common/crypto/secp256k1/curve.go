@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"crypto/elliptic"
 	"unsafe"
-	"paradigm/common/math"
+	"github.com/paradigm-network/paradigm/common/math"
 )
 
 import "C"
