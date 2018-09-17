@@ -22,6 +22,7 @@ import (
 // exist yet, the code will attempt to create a watcher at most this often.
 const minReloadInterval = 2 * time.Second
 
+
 // accountCache is a live index of all accounts in the keystore.
 type accountCache struct {
 	keydir string

@@ -8,7 +8,7 @@ import (
 	"paradigm/event"
 )
 
-//
+
 // Backend is a "wallet provider" that may contain a batch of accounts they can
 // sign transactions with and upon request, do so.
 type Backend interface {
@@ -20,6 +20,8 @@ type Backend interface {
 	Subscribe(sink chan<- WalletEvent) event.Subscription
 }
 
+
+//Transaction hasn't been defined in the core directory.
 // Wallet represents a software or hardware wallet that might contain one or more
 // accounts.
 type Wallet interface {
