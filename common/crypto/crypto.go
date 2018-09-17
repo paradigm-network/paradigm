@@ -1,13 +1,13 @@
 package crypto
 
 import (
-	"paradigm/common/crypto/sha3"
 	"crypto/ecdsa"
-	"paradigm/common"
 	"crypto/elliptic"
 	"math/big"
 	"fmt"
 	"errors"
+	"github.com/paradigm-network/paradigm/common/crypto/sha3"
+	"github.com/paradigm-network/paradigm/common"
 )
 
 var (
