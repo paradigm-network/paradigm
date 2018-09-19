@@ -27,7 +27,7 @@ func SigToPub(hash, sig []byte) (*ecdsa.PublicKey, error) {
 	return (*ecdsa.PublicKey)(pub), err
 }
 
-// Sign calculates an ECDSA signature.
+// SignWithPrivKey calculates an ECDSA signature.
 //
 // This function is susceptible to chosen plaintext attacks that can leak
 // information about the private key that is used for signing. Callers must

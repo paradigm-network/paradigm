@@ -172,7 +172,7 @@ func (e *Comet) Sign(privKey *ecdsa.PrivateKey) error {
 	if err != nil {
 		return err
 	}
-	R, S, err := crypto.Sign(privKey, signBytes)
+	R, S, err := crypto.SignWithPrivKey(privKey, signBytes)
 	if err != nil {
 		return err
 	}

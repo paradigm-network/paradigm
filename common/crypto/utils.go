@@ -28,7 +28,7 @@ func FromECDSAPub(pub *ecdsa.PublicKey) []byte {
 	return elliptic.Marshal(elliptic.P256(), pub.X, pub.Y)
 }
 
-func Sign(priv *ecdsa.PrivateKey, hash []byte) (r, s *big.Int, err error) {
+func SignWithPrivKey(priv *ecdsa.PrivateKey, hash []byte) (r, s *big.Int, err error) {
 	return ecdsa.Sign(rand.Reader, priv, hash)
 }
 

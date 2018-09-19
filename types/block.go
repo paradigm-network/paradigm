@@ -185,7 +185,7 @@ func (b *Block) Sign(privKey *ecdsa.PrivateKey) (bs BlockSignature, err error) {
 	if err != nil {
 		return bs, err
 	}
-	R, S, err := crypto.Sign(privKey, signBytes)
+	R, S, err := crypto.SignWithPrivKey(privKey, signBytes)
 	if err != nil {
 		return bs, err
 	}
