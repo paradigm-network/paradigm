@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
+	"github.com/paradigm-network/paradigm/common/file"
 	"io"
 	"io/ioutil"
 	"os"
@@ -12,7 +13,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"github.com/paradigm-network/paradigm/common/file"
 )
 
 const (
