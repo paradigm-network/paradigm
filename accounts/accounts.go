@@ -3,9 +3,9 @@ package accounts
 
 import (
 	"math/big"
-	"paradigm/common"
-	"paradigm/core/types"
-	"paradigm/event"
+	"github.com/paradigm-network/paradigm/common"
+	"github.com/paradigm-network/paradigm/common/types"
+	"github.com/paradigm-network/paradigm/common/event"
 )
 
 

@@ -1,7 +1,7 @@
 package keystore
 
 import (
-	"paradigm/common"
+	"github.com/paradigm-network/paradigm/common"
 	"path/filepath"
 	"io/ioutil"
 	"encoding/json"
@@ -11,13 +11,13 @@ import (
 	"bytes"
 	"golang.org/x/crypto/scrypt"
 	"crypto/aes"
-	"paradigm/common/math"
-	"paradigm/common/crypto/randentropy"
-	"paradigm/common/crypto"
+	"github.com/paradigm-network/paradigm/common/math"
+	"github.com/paradigm-network/paradigm/common/crypto/randentropy"
+	"github.com/paradigm-network/paradigm/common/crypto"
 	"golang.org/x/crypto/pbkdf2"
 	"crypto/sha256"
 	crand "crypto/rand"
-	"paradigm/accounts"
+	"github.com/paradigm-network/paradigm/accounts"
 	"io"
 )
 

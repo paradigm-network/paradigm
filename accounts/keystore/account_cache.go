@@ -3,14 +3,14 @@ package keystore
 import (
 	"time"
 	"sync"
-	"paradigm/common"
-	"paradigm/accounts"
+	"github.com/paradigm-network/paradigm/common"
+	"github.com/paradigm-network/paradigm/accounts"
 	"gopkg.in/fatih/set.v0"
 	"bufio"
 	"os"
 	"encoding/json"
 
-	"paradigm/log"
+	"github.com/paradigm-network/paradigm/common/log"
 	"sort"
 	"strings"
 	"path/filepath"
@@ -94,7 +94,7 @@ func (ac *accountCache) maybeReload() {
 	}
 	// No watcher running, start it.
 	//ac.watcher.start()
-	ac.throttle.Reset(minReloadInterval) //-------------------------------------dao
+	ac.throttle.Reset(minReloadInterval)
 	ac.mu.Unlock()
 	ac.scanAccounts()
 }
@@ -115,8 +115,8 @@ func (ac *accountCache) scanAccounts() error {
 	var (
 		buf = new(bufio.Reader)
 		key struct {
-				Address string `json:"address"`
-			}
+			   Address string `json:"address"`
+		   }
 	)
 	readAccount := func(path string) *accounts.Account {
 		fd, err := os.Open(path)

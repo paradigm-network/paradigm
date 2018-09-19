@@ -1,13 +1,13 @@
 package crypto
 
 import (
+	"github.com/paradigm-network/paradigm/common/crypto/sha3"
 	"crypto/ecdsa"
+	"github.com/paradigm-network/paradigm/common"
 	"crypto/elliptic"
 	"math/big"
 	"fmt"
 	"errors"
-	"github.com/paradigm-network/paradigm/common/crypto/sha3"
-	"github.com/paradigm-network/paradigm/common"
 )
 
 var (
@@ -35,11 +35,11 @@ func ToECDSAUnsafe(d []byte) *ecdsa.PrivateKey {
 
 //keystore -- keystorepassphrase -- DecryptKey()
 func PubkeyToAddress(p ecdsa.PublicKey) common.Address {
-	pubBytes := FromECDSAPub(&p)
+	pubBytes := FromECDSAPub1(&p)
 	return common.BytesToAddress(Keccak256(pubBytes[1:])[12:])
 }
 
-func FromECDSAPub(pub *ecdsa.PublicKey) []byte {
+func FromECDSAPub1(pub *ecdsa.PublicKey) []byte {
 	if pub == nil || pub.X == nil || pub.Y == nil {
 		return nil
 	}

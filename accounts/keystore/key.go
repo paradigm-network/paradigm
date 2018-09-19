@@ -1,14 +1,14 @@
 package keystore
 
 import (
-	"paradigm/common"
+	"github.com/paradigm-network/paradigm/common"
 	"github.com/pborman/uuid"
 	"crypto/ecdsa"
 	"os"
 	"path/filepath"
 	"io/ioutil"
 	"io"
-	"paradigm/common/crypto"
+	"github.com/paradigm-network/paradigm/common/crypto"
 	"time"
 	"encoding/hex"
 	"fmt"

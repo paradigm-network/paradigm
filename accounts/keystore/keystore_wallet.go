@@ -1,9 +1,9 @@
 package keystore
 
 import (
-	"paradigm/accounts"
+	"github.com/paradigm-network/paradigm/accounts"
 	"math/big"
-	"paradigm/core/types"
+	"github.com/paradigm-network/paradigm/common/types"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original

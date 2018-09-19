@@ -2,10 +2,10 @@ package crypto
 
 import (
 	"crypto/elliptic"
-	"crypto/ecdsa"
-	"fmt"
 	"github.com/paradigm-network/paradigm/common/crypto/secp256k1"
+	"crypto/ecdsa"
 	"github.com/paradigm-network/paradigm/common/math"
+	"fmt"
 )
 
 
@@ -24,7 +24,7 @@ func S256() elliptic.Curve {
 // solution is to hash any input before calculating the signature.
 //
 // The produced signature is in the [R || S || V] format where V is 0 or 1.
-func Secp256Sign(hash []byte, prv *ecdsa.PrivateKey) (sig []byte, err error) {
+func Sign1(hash []byte, prv *ecdsa.PrivateKey) (sig []byte, err error) {
 	if len(hash) != 32 {
 		return nil, fmt.Errorf("hash is required to be exactly 32 bytes (%d)", len(hash))
 	}

@@ -1,17 +1,19 @@
 package keystore
 
 import (
-	"paradigm/common"
-	"paradigm/accounts"
-	"paradigm/common/event"
+	"github.com/paradigm-network/paradigm/common"
+	"github.com/paradigm-network/paradigm/accounts"
+	"github.com/paradigm-network/paradigm/common/event"
 	"sync"
 	"path/filepath"
 	"errors"
 	"crypto/ecdsa"
 	"runtime"
-	"paradigm/common/crypto"
+	"github.com/paradigm-network/paradigm/common/crypto"
 	"math/big"
-	"paradigm/core/types"
+
+	//there isn't definition of transaction yet.
+	"github.com/paradigm-network/paradigm/common/types"
 )
 
 var (
@@ -95,7 +97,7 @@ func (ks *KeyStore) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
 		return nil, ErrLocked
 	}
 	// Sign the hash using plain ECDSA operations
-	return crypto.Sign(hash, unlockedKey.PrivateKey)
+	return crypto.Sign1(hash, unlockedKey.PrivateKey)
 }
 
 // SignTx signs the given transaction with the requested account.
@@ -124,7 +126,7 @@ func (ks *KeyStore) SignHashWithPassphrase(a accounts.Account, passphrase string
 		return nil, err
 	}
 	defer zeroKey(key.PrivateKey)
-	return crypto.Sign(hash, key.PrivateKey)
+	return crypto.Sign1(hash, key.PrivateKey)
 }
 
 func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.Account, *Key, error) {
