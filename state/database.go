@@ -2,8 +2,8 @@ package state
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/paradigm-network/paradigm/common"
+	"github.com/paradigm-network/paradigm/storage"
 	"github.com/paradigm-network/paradigm/trie"
 	"sync"
 
@@ -36,7 +36,6 @@ type Database interface {
 	CopyTrie(Trie) Trie
 }
 
-// Trie is a Ethereum Merkle Trie.
 type Trie interface {
 	TryGet(key []byte) ([]byte, error)
 	TryUpdate(key, value []byte) error
@@ -49,13 +48,13 @@ type Trie interface {
 
 // NewDatabase creates a backing store for state. The returned database is safe for
 // concurrent use and retains cached trie nodes in memory.
-func NewDatabase(db ethdb.Database) Database {
+func NewDatabase(storage storage.Store) Database {
 	csc, _ := lru.New(codeSizeCacheSize)
-	return &cachingDB{db: db, codeSizeCache: csc}
+	return &cachingDB{storage: storage, codeSizeCache: csc}
 }
 
 type cachingDB struct {
-	db            ethdb.Database
+	storage       storage.Store
 	mu            sync.Mutex
 	pastTries     []*trie.SecureTrie
 	codeSizeCache *lru.Cache
@@ -70,7 +69,7 @@ func (db *cachingDB) OpenTrie(root common.Hash) (Trie, error) {
 			return cachedTrie{db.pastTries[i].Copy(), db}, nil
 		}
 	}
-	tr, err := trie.NewSecure(root, db.db, MaxTrieCacheGen)
+	tr, err := trie.NewSecure(root, db.storage, MaxTrieCacheGen)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +89,7 @@ func (db *cachingDB) pushTrie(t *trie.SecureTrie) {
 }
 
 func (db *cachingDB) OpenStorageTrie(addrHash, root common.Hash) (Trie, error) {
-	return trie.NewSecure(root, db.db, 0)
+	return trie.NewSecure(root, db.storage, 0)
 }
 
 func (db *cachingDB) CopyTrie(t Trie) Trie {
@@ -105,7 +104,7 @@ func (db *cachingDB) CopyTrie(t Trie) Trie {
 }
 
 func (db *cachingDB) ContractCode(addrHash, codeHash common.Hash) ([]byte, error) {
-	code, err := db.db.Get(codeHash[:])
+	code, err := db.storage.Get(codeHash[:])
 	if err == nil {
 		db.codeSizeCache.Add(codeHash, len(code))
 	}
