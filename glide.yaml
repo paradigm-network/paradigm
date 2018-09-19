@@ -6,6 +6,7 @@ import:
 - package: golang.org/x/net
   subpackages:
   - trace
+- package: github.com/btcsuite/btcd/btcec
 testImport:
 - package: github.com/stretchr/testify
   subpackages:
