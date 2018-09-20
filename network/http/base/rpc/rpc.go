@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"sync"
+	"io/ioutil"
+	"github.com/rs/zerolog/log"
+	"github.com/paradigm-network/paradigm/core"
 )
 
-
-
 func init() {
-	mainMux.m = make(map[string]func([]interface{}) map[string]interface{})
+	mainMux.m = make(map[string]func(w http.ResponseWriter, r *http.Request))
 }
 
 //an instance of the multiplexer
@@ -18,15 +19,16 @@ var mainMux ServeMux
 //multiplexer that keeps track of every function to be called on specific rpc call
 type ServeMux struct {
 	sync.RWMutex
-	m               map[string]func([]interface{}) map[string]interface{}
+	m map[string]func(w http.ResponseWriter, r *http.Request)
 	defaultFunction func(http.ResponseWriter, *http.Request)
+
+	node *core.Node
 }
-
-
 
 // this is the function that should be called in order to answer an rpc call
 // should be registered like "http.HandleFunc("/", httpjsonrpc.Handle)"
 func Handle(w http.ResponseWriter, r *http.Request) {
+
 	mainMux.RLock()
 	defer mainMux.RUnlock()
 	if r.Method == "OPTIONS" {
@@ -35,14 +37,15 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		return
 	}
+
 	//JSON RPC commands should be POSTs
 	if r.Method != "POST" {
 		if mainMux.defaultFunction != nil {
-			log.Info("HTTP JSON RPC Handle - Method!=\"POST\"")
+			log.Info().Interface("excuting function", mainMux.defaultFunction).Msg("HTTP JSON RPC Handle - Method!=\"POST\"")
 			mainMux.defaultFunction(w, r)
 			return
 		} else {
-			log.Warn("HTTP JSON RPC Handle - Method!=\"POST\"")
+			log.Warn().Interface("no excuting function", mainMux.defaultFunction).Msg("HTTP JSON RPC Handle - Method!=\"POST\"")
 			return
 		}
 	}
@@ -50,11 +53,11 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	//check if there is Request Body to read
 	if r.Body == nil {
 		if mainMux.defaultFunction != nil {
-			log.Info("HTTP JSON RPC Handle - Request body is nil")
+			log.Info().Msg("HTTP JSON RPC Handle - Request body is nil")
 			mainMux.defaultFunction(w, r)
 			return
 		} else {
-			log.Warn("HTTP JSON RPC Handle - Request body is nil")
+			log.Warn().Msg("HTTP JSON RPC Handle - Request body is nil")
 			return
 		}
 	}
@@ -62,70 +65,36 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	//read the body of the request
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Error("HTTP JSON RPC Handle - ioutil.ReadAll: ", err)
+		log.Error().Interface("ioutil.ReadAll", err).Msg("HTTP JSON RPC Handle - ioutil.ReadAll error")
 		return
 	}
 	request := make(map[string]interface{})
 	err = json.Unmarshal(body, &request)
 	if err != nil {
-		log.Error("HTTP JSON RPC Handle - json.Unmarshal: ", err)
+		log.Error().Interface("json.Unmarshal", err).Msg("HTTP JSON RPC Handle - json.Unmarshal error")
 		return
 	}
 	if request["method"] == nil {
-		log.Error("HTTP JSON RPC Handle - method not found: ")
+		log.Error().Msg("HTTP JSON RPC Handle - method not found")
 		return
 	}
 	method, ok := request["method"].(string)
 	if !ok {
-		log.Error("HTTP JSON RPC Handle - method is not string: ")
+		log.Error().Msg("HTTP JSON RPC Handle - method is not string")
 		return
 	}
 	//get the corresponding function
-	function, ok := mainMux.m[method]
+	_, ok = mainMux.m[method]
 	if ok {
-		response := function(request["params"].([]interface{}))
-		data, err := json.Marshal(map[string]interface{}{
-			"jsonrpc": "2.0",
-			"error":   response["error"],
-			"desc":    response["desc"],
-			"result":  response["result"],
-			"id":      request["id"],
-		})
-		if err != nil {
-			log.Error("HTTP JSON RPC Handle - json.Marshal: ", err)
-			return
-		}
-		w.Header().Add("Access-Control-Allow-Headers", "Content-Type")
-		w.Header().Set("content-type", "application/json;charset=utf-8")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Write(data)
+		return
 	} else {
 		//if the function does not exist
-		log.Warn("HTTP JSON RPC Handle - No function to call for ", request["method"])
-		data, err := json.Marshal(map[string]interface{}{
-			"error": berr.INVALID_METHOD,
-			"result": map[string]interface{}{
-				"code":    -32601,
-				"message": "Method not found",
-				"data":    "The called method was not found on the server",
-			},
-			"id": request["id"],
-		})
-		if err != nil {
-			log.Error("HTTP JSON RPC Handle - json.Marshal: ", err)
-			return
-		}
-		w.Header().Add("Access-Control-Allow-Headers", "Content-Type")
-		w.Header().Set("content-type", "application/json;charset=utf-8")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Write(data)
+		log.Warn().Interface("No function to call for", request["method"]).Msg("HTTP JSON RPC Handle - No function to call for ")
 	}
 }
 
-
-
 //a function to register functions to be called for specific rpc calls
-func HandleFunc(pattern string, handler func([]interface{}) map[string]interface{}) {
+func HandleFunc(pattern string, handler func(w http.ResponseWriter, r *http.Request)) {
 	mainMux.Lock()
 	defer mainMux.Unlock()
 	mainMux.m[pattern] = handler
