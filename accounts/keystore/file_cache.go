@@ -1,19 +1,19 @@
 package keystore
 
 import (
+	"github.com/rs/zerolog/log"
 	"time"
 	"sync"
 	"gopkg.in/fatih/set.v0"
 	"path/filepath"
 	"io/ioutil"
-	"github.com/paradigm-network/paradigm/common/log"
 	"os"
 	"strings"
 )
 
 // fileCache is a cache of files seen during scan of keystore.
 type fileCache struct {
-	all     *set.SetNonTS // Set of all files from the keystore folder
+	all     set.Interface // Set of all files from the keystore folder
 	lastMod time.Time     // Last time instance when a file was modified
 	mu      sync.RWMutex
 }
@@ -34,15 +34,15 @@ func (fc *fileCache) scan(keyDir string) (set.Interface, set.Interface, set.Inte
 	defer fc.mu.Unlock()
 
 	// Iterate all the files and gather their metadata
-	all := set.NewNonTS()
-	mods := set.NewNonTS()
+	all := set.New(set.NonThreadSafe)
+	mods := set.New(set.NonThreadSafe)
 
 	var newLastMod time.Time
 	for _, fi := range files {
 		// Skip any non-key files from the folder
 		path := filepath.Join(keyDir, fi.Name())
 		if skipKeyFile(fi) {
-			log.Trace("Ignoring file on account scan", "path", path)
+			log.Info().Str( "path", path).Msg("Ignoring file on account scan")
 			continue
 		}
 		// Gather the set of all and fresly modified files
@@ -67,7 +67,11 @@ func (fc *fileCache) scan(keyDir string) (set.Interface, set.Interface, set.Inte
 	t3 := time.Now()
 
 	// Report on the scanning stats and return
-	log.Debug("FS scan times", "list", t1.Sub(t0), "set", t2.Sub(t1), "diff", t3.Sub(t2))
+	log.Info().
+		Dur("list",t1.Sub(t0)).
+		Dur("set",t2.Sub(t1)).
+		Dur( "diff", t3.Sub(t2)).
+		Msg("FS scan times")
 	return creates, deletes, updates, nil
 }
 
