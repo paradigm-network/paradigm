@@ -17,6 +17,8 @@ import (
 	"github.com/paradigm-network/paradigm/common/crypto"
 	"github.com/paradigm-network/paradigm/version"
 	"github.com/paradigm-network/paradigm/common/log"
+	"github.com/paradigm-network/paradigm/network/http/jsonrpc"
+	"github.com/paradigm-network/paradigm/network/http/service"
 )
 
 var (
@@ -58,11 +60,6 @@ var (
 		Usage: "IP:Port of Client App",
 		Value: "127.0.0.1:1339",
 	}
-	ServiceAddressFlag = cli.StringFlag{
-		Name:  "service_addr",
-		Usage: "IP:Port of HTTP Service",
-		Value: "127.0.0.1:8000",
-	}
 	LogLevelFlag = cli.StringFlag{
 		Name:  "log_level",
 		Usage: "debug, info, warn, error, fatal, panic",
@@ -103,6 +100,11 @@ var (
 		Usage: "File containing the store database",
 		Value: defaultBadgerDir(),
 	}
+	RpcJSONPort = cli.StringFlag{
+		Name:  "rpc_json_por",
+		Usage: "rpc json port",
+		Value: "127.0.0.1:7000",
+	}
 )
 
 func main() {
@@ -129,7 +131,6 @@ func main() {
 				NoClientFlag,
 				ProxyAddressFlag,
 				ClientAddressFlag,
-				ServiceAddressFlag,
 				LogLevelFlag,
 				HeartbeatFlag,
 				MaxPoolFlag,
@@ -138,6 +139,7 @@ func main() {
 				SyncLimitFlag,
 				StoreFlag,
 				StorePathFlag,
+				RpcJSONPort,
 			},
 		},
 		{
@@ -178,7 +180,6 @@ func run(c *cli.Context) error {
 	noclient := c.Bool(NoClientFlag.Name)
 	proxyAddress := c.String(ProxyAddressFlag.Name)
 	clientAddress := c.String(ClientAddressFlag.Name)
-	serviceAddress := c.String(ServiceAddressFlag.Name)
 	heartbeat := c.Int(HeartbeatFlag.Name)
 	maxPool := c.Int(MaxPoolFlag.Name)
 	tcpTimeout := c.Int(TcpTimeoutFlag.Name)
@@ -186,6 +187,7 @@ func run(c *cli.Context) error {
 	syncLimit := c.Int(SyncLimitFlag.Name)
 	storeType := c.String(StoreFlag.Name)
 	storePath := c.String(StorePathFlag.Name)
+	rpcJSONPort := c.String(RpcJSONPort.Name)
 	log.InitRotateWriter(datadir + "/paradigm.log")
 	logger := log.GetLogger("Main")
 	logger.Info().Interface(
@@ -197,17 +199,17 @@ func run(c *cli.Context) error {
 		"no_client", noclient).Interface(
 		"proxy_addr", proxyAddress).Interface(
 		"client_addr", clientAddress).Interface(
-		"service_addr", serviceAddress).Interface(
 		"heartbeat", heartbeat).Interface(
 		"max_pool", maxPool).Interface(
 		"tcp_timeout", tcpTimeout).Interface(
 		"cache_size", cacheSize).Interface(
 		"store", storeType).Interface(
-		"store_path", storePath).Msg("Running Args")
+		"store_path", storePath).Interface(
+		"rpcJSONPort", rpcJSONPort).Msg("Running Args")
 
 	conf := core.NewConfig(onlyAccretion, time.Duration(heartbeat)*time.Millisecond,
 		time.Duration(tcpTimeout)*time.Millisecond,
-		cacheSize, syncLimit, storeType, storePath, gw2Address, fn2Address)
+		cacheSize, syncLimit, storeType, storePath, gw2Address, fn2Address, rpcJSONPort)
 
 	// Create the PEM key
 	pemKey := crypto.NewPemKey(datadir)
@@ -285,8 +287,14 @@ func run(c *cli.Context) error {
 			1)
 	}
 
-	//serviceServer := service.NewService(serviceAddress, node)
-	//go serviceServer.Serve()
+	serviceServer := service.NewService(rpcJSONPort, node)
+
+	//start rpc server
+	exitCh := make(chan interface{}, 0)
+	go func() {
+		err = jsonrpc.StartRPCServer(serviceServer)
+		close(exitCh)
+	}()
 
 	node.Run(true)
 	return nil
