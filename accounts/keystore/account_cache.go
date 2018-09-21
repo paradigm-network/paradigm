@@ -1,6 +1,7 @@
 package keystore
 
 import (
+	"github.com/rs/zerolog/log"
 	"time"
 	"sync"
 	"github.com/paradigm-network/paradigm/common"
@@ -10,7 +11,6 @@ import (
 	"os"
 	"encoding/json"
 
-	"github.com/paradigm-network/paradigm/common/log"
 	"sort"
 	"strings"
 	"path/filepath"
@@ -46,7 +46,7 @@ func newAccountCache(keydir string) (*accountCache, chan struct{}) {
 		keydir: keydir,
 		byAddr: make(map[common.Address][]accounts.Account),
 		notify: make(chan struct{}, 1),
-		fileC:  fileCache{all: set.NewNonTS()},
+		fileC:  fileCache{all: set.New(set.NonThreadSafe)},
 	}
 	//ac.watcher = newWatcher(ac)
 	return ac, ac.notify
@@ -105,7 +105,7 @@ func (ac *accountCache) scanAccounts() error {
 	// Scan the entire folder metadata for file changes
 	creates, deletes, updates, err := ac.fileC.scan(ac.keydir)
 	if err != nil {
-		log.Debug("Failed to reload keystore contents", "err", err)
+		log.Error().Err(err).Msg("Failed to reload keystore contents")
 		return err
 	}
 	if creates.Size() == 0 && deletes.Size() == 0 && updates.Size() == 0 {
@@ -121,7 +121,7 @@ func (ac *accountCache) scanAccounts() error {
 	readAccount := func(path string) *accounts.Account {
 		fd, err := os.Open(path)
 		if err != nil {
-			log.Trace("Failed to open keystore file", "path", path, "err", err)
+			log.Error().Err(err).Str("path",path).Msg("Failed to open keystore file")
 			return nil
 		}
 		defer fd.Close()
@@ -132,9 +132,9 @@ func (ac *accountCache) scanAccounts() error {
 		addr := common.HexToAddress(key.Address)
 		switch {
 		case err != nil:
-			log.Debug("Failed to decode keystore key", "path", path, "err", err)
+			log.Error().Err(err).Str("path",path).Msg("Failed to decode keystore key")
 		case (addr == common.Address{}):
-			log.Debug("Failed to decode keystore key", "path", path, "err", "missing or zero address")
+			log.Error().Str("path", path).Msg("Failed to decode keystore key,missing or zero address")
 		default:
 			return &accounts.Account{Address: addr, URL: accounts.URL{Scheme: KeyStoreScheme, Path: path}}
 		}
@@ -164,7 +164,7 @@ func (ac *accountCache) scanAccounts() error {
 	case ac.notify <- struct{}{}:
 	default:
 	}
-	log.Trace("Handled keystore changes", "time", end.Sub(start))
+	log.Info().Dur("time",end.Sub(start)).Msg("Handled keystore changes")
 	return nil
 }
 

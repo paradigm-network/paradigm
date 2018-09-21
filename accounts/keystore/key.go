@@ -1,6 +1,7 @@
 package keystore
 
 import (
+	"github.com/paradigm-network/paradigm/accounts"
 	"github.com/paradigm-network/paradigm/common"
 	"github.com/pborman/uuid"
 	"crypto/ecdsa"
@@ -63,6 +64,19 @@ type encryptedKeyJSONV3 struct {
 	Crypto  cryptoJSON `json:"crypto"`
 	Id      string     `json:"id"`
 	Version int        `json:"version"`
+}
+
+func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
+	key, err := newKey(rand)
+	if err != nil {
+		return nil, accounts.Account{}, err
+	}
+	a := accounts.Account{Address: key.Address, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}}
+	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
+		zeroKey(key.PrivateKey)
+		return nil, a, err
+	}
+	return key, a, err
 }
 
 func writeKeyFile(file string, content []byte) error {

@@ -1,12 +1,8 @@
 package core
 
 import (
-	"time"
 	"io/ioutil"
-)
-
-const(
-	rpcJSONPort string = "127.0.0.1:7000"
+	"time"
 )
 
 type Config struct {
@@ -18,11 +14,11 @@ type Config struct {
 	StoreType            string
 	StorePath            string
 
-	Gw2Address string // api gate-way address
-	Fn2Address string // function execute engine address
-
-	RpcJSONPort string //rpc JSON port
-
+	Gw2Address       string // api gate-way address
+	Fn2Address       string // function execute engine address
+	SequentiaAddress string // sequentia address
+	KeyStoreDir      string //keyfile dir
+	PwdFile          string //password  file
 	//TODO add QCP config here
 }
 
@@ -34,8 +30,7 @@ func NewConfig(
 	syncLimit int,
 	storeType string,
 	storePath string,
-	gw2Address, fn2Address string,
-	rpcJSONPort string,
+	gw2Address, fn2Address, SequentiaAddress, KeyStoreDir, PwdFile string,
 ) *Config {
 	return &Config{
 		OnlyAccretionNetwork: onlyAccretion,
@@ -47,7 +42,9 @@ func NewConfig(
 		StorePath:            storePath,
 		Gw2Address:           gw2Address,
 		Fn2Address:           fn2Address,
-		RpcJSONPort:          rpcJSONPort,
+		SequentiaAddress:     SequentiaAddress,
+		KeyStoreDir:          KeyStoreDir,
+		PwdFile:              PwdFile,
 	}
 }
 
@@ -64,6 +61,8 @@ func DefaultConfig() *Config {
 		StorePath:            storePath,
 		Gw2Address:           "127.0.0.1:9000",
 		Fn2Address:           "127.0.0.1:8000",
-		RpcJSONPort:           rpcJSONPort,
+		SequentiaAddress:     "127.0.0.1:8090",
+		KeyStoreDir:          storePath,
+		PwdFile:              storePath + "/pwd",
 	}
 }

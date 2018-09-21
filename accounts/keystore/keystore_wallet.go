@@ -3,7 +3,7 @@ package keystore
 import (
 	"github.com/paradigm-network/paradigm/accounts"
 	"math/big"
-	"github.com/paradigm-network/paradigm/common/types"
+	"github.com/paradigm-network/paradigm/types"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original
