@@ -41,11 +41,11 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	//JSON RPC commands should be POSTs
 	if r.Method != "POST" {
 		if mainMux.defaultFunction != nil {
-			log.Info().Interface("excuting function", mainMux.defaultFunction).Msg("HTTP JSON RPC Handle - Method!=\"POST\"")
+			log.Info().Msg("HTTP JSON RPC Handle - Method!=\"POST\"")
 			mainMux.defaultFunction(w, r)
 			return
 		} else {
-			log.Warn().Interface("no excuting function", mainMux.defaultFunction).Msg("HTTP JSON RPC Handle - Method!=\"POST\"")
+			log.Warn().Msg("HTTP JSON RPC Handle - Method!=\"POST\"")
 			return
 		}
 	}
@@ -65,13 +65,13 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	//read the body of the request
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Error().Interface("ioutil.ReadAll", err).Msg("HTTP JSON RPC Handle - ioutil.ReadAll error")
+		log.Error().Msg("HTTP JSON RPC Handle - ioutil.ReadAll error")
 		return
 	}
 	request := make(map[string]interface{})
 	err = json.Unmarshal(body, &request)
 	if err != nil {
-		log.Error().Interface("json.Unmarshal", err).Msg("HTTP JSON RPC Handle - json.Unmarshal error")
+		log.Error().Msg("HTTP JSON RPC Handle - json.Unmarshal error")
 		return
 	}
 	if request["method"] == nil {
@@ -89,7 +89,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		//if the function does not exist
-		log.Warn().Interface("No function to call for", request["method"]).Msg("HTTP JSON RPC Handle - No function to call for ")
+		log.Warn().Msg("HTTP JSON RPC Handle - No function to call for ")
 	}
 }
 
