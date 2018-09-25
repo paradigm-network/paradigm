@@ -11,8 +11,8 @@ import (
 
 func StartRPCServer(s *service.Service) error {
 
-	logger := log.GetLogger("StartRPCServer")
-	logger.Info().Interface("startRPCServer", StartRPCServer).Msg("RPCServer start success")
+	logger := log.GetLogger("jsonrpc")
+	logger.Info().Msg("RPCServer starting")
 
 	http.HandleFunc("/", rpc.Handle)
 
@@ -21,9 +21,31 @@ func StartRPCServer(s *service.Service) error {
 
 	err := http.ListenAndServe(core.DefaultConfig().RpcJSONPort, nil)
 	if err != nil {
-		logger.Error().Err(err).Msg("Service serve error.")
+		logger.Error().Msg("Service serve error.")
 		return fmt.Errorf("ListenAndServe error:%s", err)
 	}
 	return nil
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
