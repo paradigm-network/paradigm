@@ -7,8 +7,8 @@ import (
 	"github.com/paradigm-network/paradigm/common/log"
 	"github.com/paradigm-network/paradigm/config"
 	"github.com/paradigm-network/paradigm/core"
-	"github.com/paradigm-network/paradigm/network/http/service"
 	"github.com/paradigm-network/paradigm/network/http/jsonrpc"
+	"github.com/paradigm-network/paradigm/network/http/service"
 	"github.com/paradigm-network/paradigm/network/peer"
 	"github.com/paradigm-network/paradigm/network/tcp"
 	"github.com/paradigm-network/paradigm/proxy"
@@ -109,9 +109,9 @@ var (
 		Usage: "File containing the store password file",
 		Value: defaultPwdPath(),
 	}
-	RpcJSONPort = cli.StringFlag{
-		Name:  "rpc_json_por",
-		Usage: "rpc json port",
+	RpcAddr = cli.StringFlag{
+		Name:  "rpc_addr",
+		Usage: "RPC host address",
 		Value: "127.0.0.1:7000",
 	}
 )
@@ -149,7 +149,7 @@ func main() {
 				KeyStorePathFlag,
 				PwdFilePathFlag,
 				SequentiaAddress,
-				RpcJSONPort,
+				RpcAddr,
 			},
 		},
 		{
@@ -185,7 +185,7 @@ func printVersion(c *cli.Context) error {
 	return nil
 }
 
-func createAccount(c *cli.Context)  {
+func createAccount(c *cli.Context) {
 	scryptN := keystore.StandardScryptN
 	scryptP := keystore.StandardScryptP
 	keydir := c.String(KeyStorePathFlag.Name)
@@ -216,7 +216,8 @@ func run(c *cli.Context) error {
 	sequentiaAddress := c.String(SequentiaAddress.Name)
 	keyStoreDir := c.String(KeyStorePathFlag.Name)
 	pwdFilePath := c.String(PwdFilePathFlag.Name)
-	rpcJSONPort := c.String(RpcJSONPort.Name)
+	rpcAddr := c.String(RpcAddr.Name)
+
 	log.InitRotateWriter(datadir + "/paradigm.log")
 	logger := log.GetLogger("Main")
 	logger.Info().Interface(
@@ -231,12 +232,11 @@ func run(c *cli.Context) error {
 		"tcp_timeout", tcpTimeout).Interface(
 		"cache_size", cacheSize).Interface(
 		"store_path", storePath).Interface(
-		"rpcJSONPort", rpcJSONPort).Msg("Running Args")
+		"rpcAddr", rpcAddr).Msg("Running Args")
 
 	conf := config.NewConfig(onlyAccretion, time.Duration(heartbeat)*time.Millisecond,
 		time.Duration(tcpTimeout)*time.Millisecond,
-		cacheSize, syncLimit, storePath, gw2Address, fn2Address,sequentiaAddress,keyStoreDir,pwdFilePath)
-
+		cacheSize, syncLimit, storePath, gw2Address, fn2Address, sequentiaAddress, keyStoreDir, pwdFilePath, rpcAddr)
 
 	// Create the PEM key
 	pemKey := crypto.NewPemKey(datadir)
@@ -305,7 +305,7 @@ func run(c *cli.Context) error {
 	}
 
 	var prox proxy.AppProxy
-	prox = proxy.NewInmemAppProxy(conf,store)
+	prox = proxy.NewInmemAppProxy(conf, store)
 	//todo impl. if no_client
 	node := core.NewNode(conf, nodeID, key, peers, store, trans, prox)
 	if err := node.Init(needBootstrap); err != nil {
@@ -314,16 +314,17 @@ func run(c *cli.Context) error {
 			1)
 	}
 
-	serviceServer := service.NewService(rpcJSONPort, node)
+	serviceServer := service.NewService(node)
 
 	//start rpc server
 	exitCh := make(chan interface{}, 0)
 	go func() {
-		err = jsonrpc.StartRPCServer(serviceServer)
+		err = jsonrpc.StartRPCServer(conf, serviceServer)
 		close(exitCh)
 	}()
 
 	node.Run(true)
+
 	return nil
 }
 

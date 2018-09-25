@@ -18,6 +18,7 @@ type Config struct {
 	SequentiaAddress string // sequentia address
 	KeyStoreDir      string //keyfile dir
 	PwdFile          string //password  file
+	RpcAddr          string
 	//TODO add QCP config here
 }
 
@@ -28,7 +29,7 @@ func NewConfig(
 	cacheSize int,
 	syncLimit int,
 	storePath string,
-	gw2Address, fn2Address, SequentiaAddress, KeyStoreDir, PwdFile string,
+	gw2Address, fn2Address, SequentiaAddress, KeyStoreDir, PwdFile, RpcAddr string,
 ) *Config {
 	return &Config{
 		OnlyAccretionNetwork: onlyAccretion,
@@ -42,6 +43,7 @@ func NewConfig(
 		SequentiaAddress:     SequentiaAddress,
 		KeyStoreDir:          KeyStoreDir,
 		PwdFile:              PwdFile,
+		RpcAddr:              RpcAddr,
 	}
 }
 
@@ -59,5 +61,6 @@ func DefaultConfig() *Config {
 		SequentiaAddress:     "127.0.0.1:8090",
 		KeyStoreDir:          storePath,
 		PwdFile:              storePath + "/pwd",
+		RpcAddr:              "127.0.0.1:7000",
 	}
 }
