@@ -74,7 +74,6 @@ func (s *State) ProcessBlock(block types.Block) (common.Hash, error) {
 	fmt.Println("Process Block")
 	s.commitMutex.Lock()
 	defer s.commitMutex.Unlock()
-
 	blockHashBytes, _ := block.Hash()
 	blockHash := common.BytesToHash(blockHashBytes)
 
@@ -177,13 +176,24 @@ func (s *State) resetWAS() {
 func (s *State) InitState() error {
 
 	rootHash := common.Hash{}
-
 	//get head transaction hash
 	headTxHash := common.Hash{}
+	tx := &types.Transaction{}
+	emptyTxHash := tx.Hash()
 	data, _ := s.db.Get(headTxKey)
 	if len(data) != 0 {
+		s.logger.Info().Str("data",string(data)).Msg("db.Get")
 		headTxHash = common.BytesToHash(data)
 		s.logger.Info().Str("head_tx", headTxHash.Hex()).Msg("Loading state from existing head")
+		if headTxHash == emptyTxHash {
+			// there is no tx before use root continue.
+			//use root to initialise the state
+			var err error
+			//cache wrapped state db.
+			s.statedb, err = state.New(rootHash, state.NewDatabase(s.db))
+			s.logger.Info().Str("root", rootHash.Hex()).Msg("There is no tx before use root to continue initialise the state")
+			return err
+		}
 		//get head tx receipt
 		headTxReceipt, err := s.GetReceipt(headTxHash)
 		if err != nil {
@@ -202,6 +212,7 @@ func (s *State) InitState() error {
 	var err error
 	//cache wrapped state db.
 	s.statedb, err = state.New(rootHash, state.NewDatabase(s.db))
+	s.logger.Info().Str("root", rootHash.Hex()).Msg("Use root to initialise the state")
 	return err
 }
 

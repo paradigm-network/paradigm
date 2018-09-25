@@ -7,8 +7,6 @@ import (
 	"github.com/paradigm-network/paradigm/common/log"
 	"github.com/paradigm-network/paradigm/config"
 	"github.com/paradigm-network/paradigm/core"
-	"github.com/paradigm-network/paradigm/network/http/jsonrpc"
-	"github.com/paradigm-network/paradigm/network/http/service"
 	"github.com/paradigm-network/paradigm/network/peer"
 	"github.com/paradigm-network/paradigm/network/tcp"
 	"github.com/paradigm-network/paradigm/proxy"
@@ -304,24 +302,23 @@ func run(c *cli.Context) error {
 		return cli.NewExitError(err, 1)
 	}
 
-	var prox proxy.AppProxy
-	prox = proxy.NewInmemAppProxy(conf, store)
+	proxy := proxy.NewInmemAppProxy(conf, store)
 	//todo impl. if no_client
-	node := core.NewNode(conf, nodeID, key, peers, store, trans, prox)
+	node := core.NewNode(conf, nodeID, key, peers, store, trans, proxy)
 	if err := node.Init(needBootstrap); err != nil {
 		return cli.NewExitError(
 			fmt.Sprintf("failed to initialize node: %s", err),
 			1)
 	}
 
-	serviceServer := service.NewService(node)
+	//serviceServer := service.NewService(node)
 
 	//start rpc server
-	exitCh := make(chan interface{}, 0)
-	go func() {
-		err = jsonrpc.StartRPCServer(conf, serviceServer)
-		close(exitCh)
-	}()
+	//exitCh := make(chan interface{}, 0)
+	//go func() {
+	//	err = jsonrpc.StartRPCServer(conf, serviceServer)
+	//	close(exitCh)
+	//}()
 
 	node.Run(true)
 

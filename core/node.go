@@ -57,7 +57,7 @@ func NewNode(conf *config.Config,
 	participants []peer.Peer,
 	store storage.Store,
 	trans network.Transport,
-	proxy proxy.AppProxy,
+	proxy *proxy.InmemAppProxy,
 ) *Node {
 
 	localAddr := trans.LocalAddr()
