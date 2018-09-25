@@ -7,7 +7,8 @@ import (
 	"github.com/paradigm-network/paradigm/common/log"
 	"github.com/paradigm-network/paradigm/config"
 	"github.com/paradigm-network/paradigm/core"
-	"github.com/paradigm-network/paradigm/core/service"
+	"github.com/paradigm-network/paradigm/network/http/service"
+	"github.com/paradigm-network/paradigm/network/http/jsonrpc"
 	"github.com/paradigm-network/paradigm/network/peer"
 	"github.com/paradigm-network/paradigm/network/tcp"
 	"github.com/paradigm-network/paradigm/proxy"
@@ -229,8 +230,6 @@ func run(c *cli.Context) error {
 		"max_pool", maxPool).Interface(
 		"tcp_timeout", tcpTimeout).Interface(
 		"cache_size", cacheSize).Interface(
-		"store_path", storePath).Interface(
-		"store", storeType).Interface(
 		"store_path", storePath).Interface(
 		"rpcJSONPort", rpcJSONPort).Msg("Running Args")
 
