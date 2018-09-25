@@ -6,7 +6,7 @@ import (
 
 	"github.com/paradigm-network/paradigm/common/crypto"
 	"github.com/paradigm-network/paradigm/common/rlp"
-	"github.com/paradigm-network/paradigm/common/types"
+	"github.com/paradigm-network/paradigm/types"
 	"github.com/rs/zerolog/log"
 
 	"github.com/paradigm-network/paradigm/common"

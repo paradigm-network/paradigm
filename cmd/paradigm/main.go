@@ -2,23 +2,25 @@ package main
 
 import (
 	"fmt"
+	"github.com/paradigm-network/paradigm/accounts/keystore"
+	"github.com/paradigm-network/paradigm/common/crypto"
+	"github.com/paradigm-network/paradigm/common/log"
+	"github.com/paradigm-network/paradigm/config"
+	"github.com/paradigm-network/paradigm/core"
+	"github.com/paradigm-network/paradigm/core/service"
+	"github.com/paradigm-network/paradigm/network/peer"
+	"github.com/paradigm-network/paradigm/network/tcp"
+	"github.com/paradigm-network/paradigm/proxy"
+	"github.com/paradigm-network/paradigm/storage"
+	"github.com/paradigm-network/paradigm/version"
 	"gopkg.in/urfave/cli.v1"
+	"io/ioutil"
 	"os"
-	"time"
-	"sort"
 	"os/user"
 	"path/filepath"
 	"runtime"
-	"github.com/paradigm-network/paradigm/core"
-	"github.com/paradigm-network/paradigm/storage"
-	"github.com/paradigm-network/paradigm/network/tcp"
-	"github.com/paradigm-network/paradigm/proxy"
-	"github.com/paradigm-network/paradigm/network/peer"
-	"github.com/paradigm-network/paradigm/common/crypto"
-	"github.com/paradigm-network/paradigm/version"
-	"github.com/paradigm-network/paradigm/common/log"
-	"github.com/paradigm-network/paradigm/network/http/jsonrpc"
-	"github.com/paradigm-network/paradigm/network/http/service"
+	"sort"
+	"time"
 )
 
 var (
@@ -42,23 +44,19 @@ var (
 		Usage: "IP:Port to bind Fn2 module",
 		Value: "127.0.0.1:8000",
 	}
+	SequentiaAddress = cli.StringFlag{
+		Name:  "seq_address",
+		Usage: "IP:Port to bind Senqutia module",
+		Value: "127.0.0.1:8090",
+	}
 	OnlyAccretion = cli.BoolFlag{
 		Name:  "only_accretion",
 		Usage: "Only if join accretion network",
 	}
-	NoClientFlag = cli.BoolFlag{
-		Name:  "no_client",
-		Usage: "Run Paradigm with dummy in-memory App client",
-	}
-	ProxyAddressFlag = cli.StringFlag{
-		Name:  "proxy_addr",
-		Usage: "IP:Port to bind Proxy Server",
-		Value: "127.0.0.1:1338",
-	}
-	ClientAddressFlag = cli.StringFlag{
-		Name:  "client_addr",
-		Usage: "IP:Port of Client App",
-		Value: "127.0.0.1:1339",
+	ServiceAddressFlag = cli.StringFlag{
+		Name:  "service_addr",
+		Usage: "IP:Port of HTTP Service",
+		Value: "127.0.0.1:8000",
 	}
 	LogLevelFlag = cli.StringFlag{
 		Name:  "log_level",
@@ -100,6 +98,16 @@ var (
 		Usage: "File containing the store database",
 		Value: defaultBadgerDir(),
 	}
+	KeyStorePathFlag = cli.StringFlag{
+		Name:  "keystore_path",
+		Usage: "File containing the store keyfile",
+		Value: defaultKeyStoreDir(),
+	}
+	PwdFilePathFlag = cli.StringFlag{
+		Name:  "pwd_path",
+		Usage: "File containing the store password file",
+		Value: defaultPwdPath(),
+	}
 	RpcJSONPort = cli.StringFlag{
 		Name:  "rpc_json_por",
 		Usage: "rpc json port",
@@ -128,9 +136,7 @@ func main() {
 				NodeAddressFlag,
 				Gw2AddressFlag,
 				Fn2AddressFlag,
-				NoClientFlag,
-				ProxyAddressFlag,
-				ClientAddressFlag,
+				ServiceAddressFlag,
 				LogLevelFlag,
 				HeartbeatFlag,
 				MaxPoolFlag,
@@ -139,6 +145,9 @@ func main() {
 				SyncLimitFlag,
 				StoreFlag,
 				StorePathFlag,
+				KeyStorePathFlag,
+				PwdFilePathFlag,
+				SequentiaAddress,
 				RpcJSONPort,
 			},
 		},
@@ -146,6 +155,11 @@ func main() {
 			Name:   "version",
 			Usage:  "Show version info",
 			Action: printVersion,
+		},
+		{
+			Name:   "initAccount",
+			Usage:  "Init Account",
+			Action: createAccount,
 		},
 	}
 	app.Run(os.Args)
@@ -170,6 +184,20 @@ func printVersion(c *cli.Context) error {
 	return nil
 }
 
+func createAccount(c *cli.Context)  {
+	scryptN := keystore.StandardScryptN
+	scryptP := keystore.StandardScryptP
+	keydir := c.String(KeyStorePathFlag.Name)
+
+	passwordFile := c.String(PwdFilePathFlag.Name)
+	pwd, _ := ioutil.ReadFile(passwordFile)
+	fmt.Println(string(keydir))
+	fmt.Println(string(passwordFile))
+	fmt.Println(string(pwd))
+	address, _ := keystore.StoreKey(keydir, string(pwd), scryptN, scryptP)
+	fmt.Printf("Address: {%x}\n", address)
+}
+
 func run(c *cli.Context) error {
 	fmt.Println("Paradigm Starting...")
 	onlyAccretion := c.Bool(OnlyAccretion.Name)
@@ -177,16 +205,16 @@ func run(c *cli.Context) error {
 	addr := c.String(NodeAddressFlag.Name)
 	gw2Address := c.String(Gw2AddressFlag.Name)
 	fn2Address := c.String(Fn2AddressFlag.Name)
-	noclient := c.Bool(NoClientFlag.Name)
-	proxyAddress := c.String(ProxyAddressFlag.Name)
-	clientAddress := c.String(ClientAddressFlag.Name)
+	serviceAddress := c.String(ServiceAddressFlag.Name)
 	heartbeat := c.Int(HeartbeatFlag.Name)
 	maxPool := c.Int(MaxPoolFlag.Name)
 	tcpTimeout := c.Int(TcpTimeoutFlag.Name)
 	cacheSize := c.Int(CacheSizeFlag.Name)
 	syncLimit := c.Int(SyncLimitFlag.Name)
-	storeType := c.String(StoreFlag.Name)
 	storePath := c.String(StorePathFlag.Name)
+	sequentiaAddress := c.String(SequentiaAddress.Name)
+	keyStoreDir := c.String(KeyStorePathFlag.Name)
+	pwdFilePath := c.String(PwdFilePathFlag.Name)
 	rpcJSONPort := c.String(RpcJSONPort.Name)
 	log.InitRotateWriter(datadir + "/paradigm.log")
 	logger := log.GetLogger("Main")
@@ -196,20 +224,20 @@ func run(c *cli.Context) error {
 		"gw2_addr", gw2Address).Interface(
 		"fn2_addr", fn2Address).Interface(
 		"node_addr", addr).Interface(
-		"no_client", noclient).Interface(
-		"proxy_addr", proxyAddress).Interface(
-		"client_addr", clientAddress).Interface(
+		"service_addr", serviceAddress).Interface(
 		"heartbeat", heartbeat).Interface(
 		"max_pool", maxPool).Interface(
 		"tcp_timeout", tcpTimeout).Interface(
 		"cache_size", cacheSize).Interface(
+		"store_path", storePath).Interface(
 		"store", storeType).Interface(
 		"store_path", storePath).Interface(
 		"rpcJSONPort", rpcJSONPort).Msg("Running Args")
 
-	conf := core.NewConfig(onlyAccretion, time.Duration(heartbeat)*time.Millisecond,
+	conf := config.NewConfig(onlyAccretion, time.Duration(heartbeat)*time.Millisecond,
 		time.Duration(tcpTimeout)*time.Millisecond,
-		cacheSize, syncLimit, storeType, storePath, gw2Address, fn2Address, rpcJSONPort)
+		cacheSize, syncLimit, storePath, gw2Address, fn2Address,sequentiaAddress,keyStoreDir,pwdFilePath)
+
 
 	// Create the PEM key
 	pemKey := crypto.NewPemKey(datadir)
@@ -278,7 +306,7 @@ func run(c *cli.Context) error {
 	}
 
 	var prox proxy.AppProxy
-	prox = proxy.NewInmemAppProxy()
+	prox = proxy.NewInmemAppProxy(conf,store)
 	//todo impl. if no_client
 	node := core.NewNode(conf, nodeID, key, peers, store, trans, prox)
 	if err := node.Init(needBootstrap); err != nil {
@@ -304,6 +332,20 @@ func defaultBadgerDir() string {
 	dataDir := defaultDataDir()
 	if dataDir != "" {
 		return filepath.Join(dataDir, "badger_db")
+	}
+	return ""
+}
+func defaultKeyStoreDir() string {
+	dataDir := defaultDataDir()
+	if dataDir != "" {
+		return filepath.Join(dataDir, "key_store")
+	}
+	return ""
+}
+func defaultPwdPath() string {
+	dataDir := defaultDataDir()
+	if dataDir != "" {
+		return filepath.Join(dataDir, "pwd")
 	}
 	return ""
 }

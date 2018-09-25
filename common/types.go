@@ -1,13 +1,14 @@
 package common
 
 import (
-	"github.com/paradigm-network/paradigm/common/crypto/sha3"
-	"reflect"
 	"encoding/hex"
-	"math/big"
 	"fmt"
-	"math/rand"
+	"github.com/paradigm-network/paradigm/common/crypto/sha3"
 	"github.com/paradigm-network/paradigm/common/hexutil"
+	"github.com/paradigm-network/paradigm/common/rlp"
+	"math/big"
+	"math/rand"
+	"reflect"
 )
 
 const (
@@ -222,4 +223,11 @@ func (h *UnprefixedHash) UnmarshalText(input []byte) error {
 // MarshalText encodes the hash as hex.
 func (h UnprefixedHash) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(h[:])), nil
+}
+
+func RlpHash(x interface{}) (h Hash) {
+	hw := sha3.NewKeccak256()
+	rlp.Encode(hw, x)
+	hw.Sum(h[:0])
+	return h
 }
