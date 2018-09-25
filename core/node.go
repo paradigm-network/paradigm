@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/paradigm-network/paradigm/config"
 	"sync"
 	"time"
 	"crypto/ecdsa"
@@ -20,7 +21,7 @@ import (
 type Node struct {
 	nodeState
 
-	conf   *Config
+	conf   *config.Config
 	logger *zerolog.Logger
 
 	id       int
@@ -50,13 +51,13 @@ type Node struct {
 	syncErrors   int
 }
 
-func NewNode(conf *Config,
+func NewNode(conf *config.Config,
 	id int,
 	key *ecdsa.PrivateKey,
 	participants []peer.Peer,
 	store storage.Store,
 	trans network.Transport,
-	proxy proxy.AppProxy,
+	proxy *proxy.InmemAppProxy,
 ) *Node {
 
 	localAddr := trans.LocalAddr()

@@ -7,6 +7,12 @@ import:
   subpackages:
   - trace
 - package: github.com/btcsuite/btcd/btcec
+- package: github.com/pborman/uuid
+- package: gopkg.in/fatih/set.v0
+- package: golang.org/x/crypto
+  subpackages:
+  - pbkdf2
+  - scrypt
 testImport:
 - package: github.com/stretchr/testify
   subpackages:

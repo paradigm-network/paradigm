@@ -1,13 +1,17 @@
 package proxy
 
 import (
-	"github.com/paradigm-network/paradigm/types"
-	"github.com/paradigm-network/paradigm/common/crypto"
-	"github.com/rs/zerolog"
 	"github.com/paradigm-network/paradigm/common/log"
+	"github.com/paradigm-network/paradigm/config"
 	"github.com/paradigm-network/paradigm/storage"
-	"time"
+	"github.com/paradigm-network/paradigm/types"
+	"github.com/rs/zerolog"
 )
+
+type AppProxy interface {
+	SubmitCh() chan []byte
+	CommitBlock(block types.Block) ([]byte, error)
+}
 
 //InmemProxy is used for testing
 type InmemAppProxy struct {
@@ -15,41 +19,45 @@ type InmemAppProxy struct {
 	stateHash             []byte
 	committedTransactions [][]byte
 	logger                *zerolog.Logger
-	store                 *storage.Store
+	store                 storage.Store
+	service               *Service
+	state                 *State
 }
 
-func NewInmemAppProxy() *InmemAppProxy {
-	proxy:= &InmemAppProxy{
-		submitCh:              make(chan []byte),
+func NewInmemAppProxy(config *config.Config, store storage.Store) *InmemAppProxy {
+	logger := log.GetLogger("InMemProxy")
+	submitCh := make(chan []byte)
+	state, err := NewState(store)
+	if err != nil {
+		logger.Error().Err(err).Msg("Create AppProxy error")
+		return nil
+	}
+
+	service := NewService(config.KeyStoreDir,
+		config.SequentiaAddress,
+		config.PwdFile,
+		state,
+		submitCh)
+	proxy := &InmemAppProxy{
 		stateHash:             []byte{},
 		committedTransactions: [][]byte{},
-		logger:                log.GetLogger("InMemProxy"),
+		logger:                logger,
+		service:               service,
+		submitCh:              submitCh,
+		state:                 state,
+		store:                 store,
 	}
-	go func() {
-		var a = 0
-		for  {
-			a=a+1
-			proxy.SubmitTx([]byte(string(a)))
-			time.Sleep(time.Second)
-		}
-	}()
-
+	proxy.Run()
 	return proxy
 }
 
+func (p *InmemAppProxy) Run() {
+	p.service.Run()
+}
+
 func (iap *InmemAppProxy) commit(block types.Block) ([]byte, error) {
-
-	iap.committedTransactions = append(iap.committedTransactions, block.Transactions()...)
-
-	hash := iap.stateHash
-	for _, t := range block.Transactions() {
-		tHash := crypto.SHA256(t)
-		hash = crypto.SimpleHashFromTwoHashes(hash, tHash)
-	}
-
-	iap.stateHash = hash
-
-	return iap.stateHash, nil
+	stateHash, err := iap.state.ProcessBlock(block)
+	return stateHash.Bytes(), err
 
 }
 
