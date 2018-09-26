@@ -11,7 +11,7 @@ type Service struct {
 	node *core.Node
 }
 
-func NewService(rpcJSONPort string, node *core.Node) *Service {
+func NewService(node *core.Node) *Service {
 	service := Service{
 		node: node,
 	}

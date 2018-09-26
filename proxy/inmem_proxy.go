@@ -1,13 +1,19 @@
 package proxy
 
 import (
-	"github.com/paradigm-network/paradigm/types"
-	"github.com/paradigm-network/paradigm/common/crypto"
-	"github.com/rs/zerolog"
 	"github.com/paradigm-network/paradigm/common/log"
+	"github.com/paradigm-network/paradigm/config"
 	"github.com/paradigm-network/paradigm/storage"
+	"github.com/paradigm-network/paradigm/types"
+	"github.com/rs/zerolog"
+	"sync/atomic"
 	"time"
 )
+
+type AppProxy interface {
+	SubmitCh() chan []byte
+	CommitBlock(block types.Block) ([]byte, error)
+}
 
 //InmemProxy is used for testing
 type InmemAppProxy struct {
@@ -15,41 +21,60 @@ type InmemAppProxy struct {
 	stateHash             []byte
 	committedTransactions [][]byte
 	logger                *zerolog.Logger
-	store                 *storage.Store
+	store                 storage.Store
+	service               *Service
+	state                 *State
 }
 
-func NewInmemAppProxy() *InmemAppProxy {
-	proxy:= &InmemAppProxy{
-		submitCh:              make(chan []byte),
+var ops int64 = 0
+
+func NewInmemAppProxy(config *config.Config, store storage.Store) *InmemAppProxy {
+	logger := log.GetLogger("InMemProxy")
+	submitCh := make(chan []byte)
+	state, err := NewState(store)
+	if err != nil {
+		logger.Error().Err(err).Msg("Create AppProxy error")
+		return nil
+	}
+
+	service := NewService(config.KeyStoreDir,
+		config.SequentiaAddress,
+		config.PwdFile,
+		state,
+		submitCh)
+	proxy := &InmemAppProxy{
 		stateHash:             []byte{},
 		committedTransactions: [][]byte{},
-		logger:                log.GetLogger("InMemProxy"),
+		logger:                logger,
+		service:               service,
+		submitCh:              submitCh,
+		state:                 state,
+		store:                 store,
 	}
+	proxy.Run()
+
 	go func() {
-		var a = 0
-		for  {
-			a=a+1
-			proxy.SubmitTx([]byte(string(a)))
+		for {
+			logger.Info().Int64("Current TPS ", atomic.LoadInt64(&ops)).Msg("Proxy TPS")
 			time.Sleep(time.Second)
+			atomic.StoreInt64(&ops, 0)
 		}
 	}()
-
 	return proxy
 }
 
+func (p *InmemAppProxy) Run() {
+	p.service.Run()
+}
+
 func (iap *InmemAppProxy) commit(block types.Block) ([]byte, error) {
+	//todo sort by nonce
 
-	iap.committedTransactions = append(iap.committedTransactions, block.Transactions()...)
-
-	hash := iap.stateHash
-	for _, t := range block.Transactions() {
-		tHash := crypto.SHA256(t)
-		hash = crypto.SimpleHashFromTwoHashes(hash, tHash)
+	stateHash, err := iap.state.ProcessBlock(block)
+	if err == nil {
+		atomic.AddInt64(&ops,int64(len(block.Transactions())))
 	}
-
-	iap.stateHash = hash
-
-	return iap.stateHash, nil
+	return stateHash.Bytes(), err
 
 }
 
