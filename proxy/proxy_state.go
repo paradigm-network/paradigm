@@ -70,7 +70,6 @@ func NewState(store storage.Store) (*State, error) {
 //}
 
 func (s *State) ProcessBlock(block types.Block) (common.Hash, error) {
-	fmt.Println(s)
 	fmt.Println("Process Block")
 	s.commitMutex.Lock()
 	defer s.commitMutex.Unlock()
@@ -182,7 +181,6 @@ func (s *State) InitState() error {
 	emptyTxHash := tx.Hash()
 	data, _ := s.db.Get(headTxKey)
 	if len(data) != 0 {
-		s.logger.Info().Str("data",string(data)).Msg("db.Get")
 		headTxHash = common.BytesToHash(data)
 		s.logger.Info().Str("head_tx", headTxHash.Hex()).Msg("Loading state from existing head")
 		if headTxHash == emptyTxHash {

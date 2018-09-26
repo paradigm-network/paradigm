@@ -6,6 +6,8 @@ import (
 	"github.com/paradigm-network/paradigm/storage"
 	"github.com/paradigm-network/paradigm/types"
 	"github.com/rs/zerolog"
+	"sync/atomic"
+	"time"
 )
 
 type AppProxy interface {
@@ -23,6 +25,8 @@ type InmemAppProxy struct {
 	service               *Service
 	state                 *State
 }
+
+var ops int64 = 0
 
 func NewInmemAppProxy(config *config.Config, store storage.Store) *InmemAppProxy {
 	logger := log.GetLogger("InMemProxy")
@@ -48,6 +52,14 @@ func NewInmemAppProxy(config *config.Config, store storage.Store) *InmemAppProxy
 		store:                 store,
 	}
 	proxy.Run()
+
+	go func() {
+		for {
+			logger.Info().Int64("Current TPS ", atomic.LoadInt64(&ops)).Msg("Proxy TPS")
+			time.Sleep(time.Second)
+			atomic.StoreInt64(&ops, 0)
+		}
+	}()
 	return proxy
 }
 
@@ -56,7 +68,12 @@ func (p *InmemAppProxy) Run() {
 }
 
 func (iap *InmemAppProxy) commit(block types.Block) ([]byte, error) {
+	//todo sort by nonce
+
 	stateHash, err := iap.state.ProcessBlock(block)
+	if err == nil {
+		atomic.AddInt64(&ops,int64(len(block.Transactions())))
+	}
 	return stateHash.Bytes(), err
 
 }
