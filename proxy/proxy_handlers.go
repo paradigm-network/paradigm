@@ -98,8 +98,6 @@ One should use the /receipt endpoint to retrieve the corresponding receipt and
 verify if/how the State was modified.
 */
 func transactionHandler(w http.ResponseWriter, r *http.Request, m *Service) {
-	log.Info().Interface("request", r).Msg("POST tx")
-
 	decoder := json.NewDecoder(r.Body)
 	var txArgs SendTxArgs
 	err := decoder.Decode(&txArgs)
@@ -109,7 +107,7 @@ func transactionHandler(w http.ResponseWriter, r *http.Request, m *Service) {
 		return
 	}
 	defer r.Body.Close()
-
+	log.Info().Interface("txArgs", txArgs).Msg("POST tx")
 	tx, err := prepareTransaction(txArgs, m.state, m.keyStore)
 	if err != nil {
 		log.Error().Err(err).Msg("Preparing Transaction")
