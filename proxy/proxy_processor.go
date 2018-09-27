@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"fmt"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/paradigm-network/paradigm/common"
 	"github.com/paradigm-network/paradigm/state"
@@ -97,6 +98,7 @@ func (st *StateTransition) preCheck() error {
 	// Make sure this transaction's nonce is correct
 	if msg.CheckNonce() {
 		nonce := st.state.GetNonce(sender)
+		fmt.Printf("check msg nonce = %d , state nonce = %d \n",msg.Nonce(),nonce)
 		if nonce < msg.Nonce() {
 			return ErrNonceTooHigh
 		} else if nonce > msg.Nonce() {

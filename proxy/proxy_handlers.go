@@ -3,6 +3,7 @@ package proxy
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/paradigm-network/paradigm/accounts"
 	"github.com/paradigm-network/paradigm/accounts/keystore"
 	"github.com/paradigm-network/paradigm/common"
@@ -107,14 +108,14 @@ func transactionHandler(w http.ResponseWriter, r *http.Request, m *Service) {
 		return
 	}
 	defer r.Body.Close()
-	log.Info().Interface("txArgs", txArgs).Msg("POST tx")
+	log.Info().Interface("txArgs", txArgs).Msg("POST tx .1 ")
 	tx, err := prepareTransaction(txArgs, m.state, m.keyStore)
 	if err != nil {
 		log.Error().Err(err).Msg("Preparing Transaction")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
+	log.Info().Interface("after prepare", tx).Msg("POST tx .2 ")
 	data, err := rlp.EncodeToBytes(tx)
 	if err != nil {
 		log.Error().Err(err).Msg("Encoding Transaction")
@@ -268,7 +269,8 @@ func prepareTransaction(args SendTxArgs, state *State, ks *keystore.KeyStore) (*
 
 	if args.Nonce == nil {
 		args.Nonce = new(uint64)
-		*args.Nonce = state.GetNonce(args.From)
+		*args.Nonce = state.mempool.GetPendingNonce(args.From)
+		fmt.Printf("Mempool nonce = %d , state nonce = %d \n" , &args.Nonce, state.GetNonce(args.From))
 	}
 
 	var tx *types.Transaction

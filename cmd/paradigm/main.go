@@ -303,6 +303,7 @@ func run(c *cli.Context) error {
 	}
 
 	proxy := proxy.NewInmemAppProxy(conf, store)
+
 	//todo impl. if no_client
 	node := core.NewNode(conf, nodeID, key, peers, store, trans, proxy)
 	if err := node.Init(needBootstrap); err != nil {

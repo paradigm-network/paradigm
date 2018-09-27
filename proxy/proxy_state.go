@@ -31,8 +31,8 @@ type State struct {
 	statedb     *state.StateDB
 	was         *WriteAheadState
 
+	mempool *MemPool
 	signer types.Signer
-
 	logger *zerolog.Logger
 }
 
@@ -154,7 +154,7 @@ func (s *State) commit() (common.Hash, error) {
 	s.statedb = s.was.stateDB
 	s.logger.Info().Str("root", root.Hex()).Msg("Committed")
 	s.resetWAS()
-
+	s.mempool.Reset(root)
 	return root, nil
 }
 
@@ -211,6 +211,7 @@ func (s *State) InitState() error {
 	//cache wrapped state db.
 	s.statedb, err = state.New(rootHash, state.NewDatabase(s.db))
 	s.logger.Info().Str("root", rootHash.Hex()).Msg("Use root to initialise the state")
+	s.mempool = NewMemPool(rootHash,s.db)
 	return err
 }
 

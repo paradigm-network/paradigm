@@ -372,7 +372,7 @@ func (cg *CometGraph) RoundDiff(x, y string) (int, error) {
 func (cg *CometGraph) InsertComet(comet types.Comet, setWireInfo bool) error {
 	b,_:=comet.Body.Marshal()
 	cg.logger.
-		Info().
+		Debug().
 		Str("Creator",comet.Creator()).
 		Str("Signature",comet.Signature).
 		Int("CreatorID",comet.Body.CreatorID()).Str("MarshalJson",string(b)).
@@ -403,7 +403,7 @@ func (cg *CometGraph) InsertComet(comet types.Comet, setWireInfo bool) error {
 	}
 
 	cg.logger.
-		Info().
+		Debug().
 		Str("Creator",comet.Creator()).
 		Str("Signature",comet.Signature).
 		Int("CreatorID",comet.Body.CreatorID()).

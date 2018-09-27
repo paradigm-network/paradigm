@@ -1,7 +1,9 @@
 package proxy
 
 import (
+	"bytes"
 	"github.com/paradigm-network/paradigm/common/log"
+	"github.com/paradigm-network/paradigm/common/rlp"
 	"github.com/paradigm-network/paradigm/config"
 	"github.com/paradigm-network/paradigm/storage"
 	"github.com/paradigm-network/paradigm/types"
@@ -69,7 +71,16 @@ func (p *InmemAppProxy) Run() {
 
 func (iap *InmemAppProxy) commit(block types.Block) ([]byte, error) {
 	//todo sort by nonce
-
+	for txIndex, txBytes := range block.Transactions() {
+		var t types.Transaction
+		if err := rlp.Decode(bytes.NewReader(txBytes), &t); err != nil {
+			iap.logger.Error().Err(err).Msg("Decoding Transaction")
+		}
+		iap.logger.Info().Int("txIndex",txIndex).
+			Uint64("nonce", t.Nonce()).
+			//Str("tx", t.String()).
+			Msg("commit block txs seq")
+	}
 	stateHash, err := iap.state.ProcessBlock(block)
 	if err == nil {
 		atomic.AddInt64(&ops,int64(len(block.Transactions())))

@@ -88,7 +88,7 @@ func (c *Core) Init() error {
 	initialEvent.Body.Timestamp = time.Time{}.UTC()
 	err := c.SignAndInsertSelfEvent(initialEvent)
 
-	c.logger.Info().
+	c.logger.Debug().
 		Int("index",initialEvent.Index()).
 		Str("hash",initialEvent.Hex()).
 		Msg("Initial Event")
@@ -217,7 +217,7 @@ func (c *Core) EventDiff(known map[int]int) (events []types.Comet, err error) {
 
 func (c *Core) Sync(unknownEvents []types.WireEvent) error {
 
-	c.logger.Info().Int("unknown_events",len(unknownEvents)).
+	c.logger.Debug().Int("unknown_events",len(unknownEvents)).
 		Int("transaction_pool",len(c.transactionPool)).
 		Int("block_signature_pool",len(c.blockSignaturePool)).Msg("Sync")
 	otherHead := ""
@@ -261,7 +261,7 @@ func (c *Core) Sync(unknownEvents []types.WireEvent) error {
 
 func (c *Core) AddSelfEvent() error {
 	if len(c.transactionPool) == 0 && len(c.blockSignaturePool) == 0 {
-		c.logger.Info().Msg("Empty transaction pool and block signature pool")
+		c.logger.Debug().Msg("Empty transaction pool and block signature pool")
 		return nil
 	}
 
@@ -276,7 +276,7 @@ func (c *Core) AddSelfEvent() error {
 		return fmt.Errorf("Error inserting new head: %s", err)
 	}
 
-	c.logger.Info().
+	c.logger.Debug().
 		Int("transactions",len(c.transactionPool)).
 		Int("block_signatures",len(c.blockSignaturePool)).
 		Msg("Created Self-Event")
@@ -309,7 +309,7 @@ func (c *Core) ToWire(events []types.Comet) ([]types.WireEvent, error) {
 func (c *Core) RunConsensus() error {
 	start := time.Now()
 	err := c.cg.DivideRounds()
-	c.logger.Info().Int64("duration",time.Since(start).Nanoseconds()).Msg("DivideRounds()")
+	c.logger.Debug().Int64("duration",time.Since(start).Nanoseconds()).Msg("DivideRounds()")
 	if err != nil {
 		c.logger.Error().Err(err).Msg("DivideRounds")
 		return err
@@ -317,7 +317,7 @@ func (c *Core) RunConsensus() error {
 
 	start = time.Now()
 	err = c.cg.DecideFame()
-	c.logger.Info().Int64("duration",time.Since(start).Nanoseconds()).Msg("DecideFame()")
+	c.logger.Debug().Int64("duration",time.Since(start).Nanoseconds()).Msg("DecideFame()")
 	if err != nil {
 		c.logger.Error().Err(err).Msg("DecideFame")
 		return err
@@ -325,7 +325,7 @@ func (c *Core) RunConsensus() error {
 
 	start = time.Now()
 	err = c.cg.FindOrder()
-	c.logger.Info().Int64("duration",time.Since(start).Nanoseconds()).Msg("FindOrder()")
+	c.logger.Debug().Int64("duration",time.Since(start).Nanoseconds()).Msg("FindOrder()")
 	if err != nil {
 		c.logger.Error().Err(err).Msg("FindOrder")
 		return err
