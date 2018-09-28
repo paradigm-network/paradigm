@@ -37,7 +37,7 @@ func NewService(dataDir, apiAddr, pwdFile string,
 		apiAddr:  apiAddr,
 		pwdFile:  pwdFile,
 		state:    state,
-		submitCh: submitCh}
+		submitCh: submitCh,}
 }
 
 func (m *Service) Run() {
@@ -46,7 +46,6 @@ func (m *Service) Run() {
 	m.checkErr(m.unlockAccounts())
 
 	m.checkErr(m.createGenesisAccounts())
-
 	log.Info().Msg("Serving api...")
 	go m.serveAPI()
 }
