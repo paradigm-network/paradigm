@@ -144,7 +144,7 @@ func (st *StateTransition) TransitionOnNative() (ret []byte, requiredGas, usedGa
 }
 
 func (st *StateTransition) refundGas() {
-	// Return eth for remaining gas to the sender account,
+	// Return para for remaining gas to the sender account,
 	// exchanged at the original rate.
 	sender := st.from() // err already checked
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
