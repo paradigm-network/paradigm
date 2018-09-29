@@ -120,11 +120,11 @@ func main() {
 	app.Usage = "Paradigm Network"
 	app.HideVersion = true //there is a special command to print the version
 	app.Commands = []cli.Command{
-		{
-			Name:   "keygen",
-			Usage:  "Dump new key pair",
-			Action: keygen,
-		},
+		//{
+		//	Name:   "keygen",
+		//	Usage:  "Dump new key pair",
+		//	Action: keygen,
+		//},
 		{
 			Name:   "run",
 			Usage:  "Run paradigm",
@@ -164,20 +164,21 @@ func main() {
 	app.Run(os.Args)
 }
 
-func keygen(c *cli.Context) error {
-	pemDump, err := crypto.GeneratePemKey()
-	if err != nil {
-		fmt.Println("Error generating PemDump")
-		os.Exit(2)
-	}
+//func keygen(c *cli.Context) error {
+//	pemDump, err := crypto.GeneratePemKey()
+//	if err != nil {
+//		fmt.Println("Error generating PemDump")
+//		os.Exit(2)
+//	}
+//
+//	fmt.Println("PublicKey:")
+//	fmt.Println(pemDump.PublicKey)
+//	fmt.Println("PrivateKey:")
+//	fmt.Println(pemDump.PrivateKey)
+//
+//	return nil
+//}
 
-	fmt.Println("PublicKey:")
-	fmt.Println(pemDump.PublicKey)
-	fmt.Println("PrivateKey:")
-	fmt.Println(pemDump.PrivateKey)
-
-	return nil
-}
 func printVersion(c *cli.Context) error {
 	fmt.Println(version.Version)
 	return nil
@@ -186,14 +187,16 @@ func printVersion(c *cli.Context) error {
 func createAccount(c *cli.Context) {
 	scryptN := keystore.StandardScryptN
 	scryptP := keystore.StandardScryptP
-	keydir := c.String(KeyStorePathFlag.Name)
+	path := filepath.Join(c.String(KeyStorePathFlag.Name), config.PemKeyPath)
 
 	passwordFile := c.String(PwdFilePathFlag.Name)
 	pwd, _ := ioutil.ReadFile(passwordFile)
-	fmt.Println(string(keydir))
+	fmt.Println(string(path))
 	fmt.Println(string(passwordFile))
 	fmt.Println(string(pwd))
-	address, _ := keystore.StoreKey(keydir, string(pwd), scryptN, scryptP)
+
+	//Generate key and store it in the give directory.
+	address, _ := keystore.StoreKey(path, string(pwd), scryptN, scryptP)
 	fmt.Printf("Address: {%x}\n", address)
 }
 
@@ -234,16 +237,28 @@ func run(c *cli.Context) error {
 
 	conf := config.NewConfig(onlyAccretion, time.Duration(heartbeat)*time.Millisecond,
 		time.Duration(tcpTimeout)*time.Millisecond,
-		cacheSize, syncLimit, storePath, gw2Address, fn2Address, sequentiaAddress, keyStoreDir, pwdFilePath, rpcAddr)
+		cacheSize, syncLimit, storePath, gw2Address, fn2Address, sequentiaAddress, keyStoreDir, pwdFilePath,nil,nil, rpcAddr)
 
-	// Create the PEM key
-	pemKey := crypto.NewPemKey(datadir)
-
-	// Try a read
-	key, err := pemKey.ReadKey()
+	//===============================================================================================================
+	//// Create the PEM key
+	//pemKey := crypto.NewPemKey(datadir)
+	//
+	//// Try a read
+	//key, err := pemKey.ReadKey()
+	//if err != nil {
+	//	return cli.NewExitError(err, 1)
+	//}
+	//===============================================================================================================
+	jsonPrivKey,err:=ioutil.ReadFile(filepath.Join(c.String(KeyStorePathFlag.Name), config.PemKeyPath))
 	if err != nil {
-		return cli.NewExitError(err, 1)
+		logger.Error().Msg("Key reading error")
 	}
+	pwd, _ := ioutil.ReadFile(c.String(PwdFilePathFlag.Name))
+	kk,err := keystore.DecryptKey(jsonPrivKey,string(pwd))
+	if err == nil {
+		logger.Error().Msg("key decrypt error.")
+	}
+	//===============================================================================================================
 
 	// Create the peer store
 	peerStore := peer.NewJSONPeers(datadir)
@@ -267,8 +282,9 @@ func run(c *cli.Context) error {
 		pmap[p.PubKeyHex] = i
 	}
 
-	//Find the ID of this node
-	nodePub := fmt.Sprintf("0x%X", crypto.FromECDSAPub(&key.PublicKey))
+	//Find the ID --common.Address-- of this node
+	//Raw punlic key ,[]byte
+	nodePub := fmt.Sprintf("0x%X", crypto.FromECDSAPub(&kk.PrivateKey.PublicKey))
 	nodeID := pmap[nodePub]
 
 	logger.Info().Interface("participantMap", pmap).Int("nodeID", nodeID).Msg("PARTICIPANTS")
@@ -305,7 +321,7 @@ func run(c *cli.Context) error {
 	proxy := proxy.NewInmemAppProxy(conf, store)
 
 	//todo impl. if no_client
-	node := core.NewNode(conf, nodeID, key, peers, store, trans, proxy)
+	node := core.NewNode(conf, nodeID, kk.PrivateKey, peers, store, trans, proxy)
 	if err := node.Init(needBootstrap); err != nil {
 		return cli.NewExitError(
 			fmt.Sprintf("failed to initialize node: %s", err),

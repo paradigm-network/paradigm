@@ -42,7 +42,7 @@ func (fc *fileCache) scan(keyDir string) (set.Interface, set.Interface, set.Inte
 		// Skip any non-key files from the folder
 		path := filepath.Join(keyDir, fi.Name())
 		if skipKeyFile(fi) {
-			log.Info().Str( "path", path).Msg("Ignoring file on account scan")
+			log.Info().Str("path", path).Msg("Ignoring file on account scan")
 			continue
 		}
 		// Gather the set of all and fresly modified files
@@ -68,9 +68,9 @@ func (fc *fileCache) scan(keyDir string) (set.Interface, set.Interface, set.Inte
 
 	// Report on the scanning stats and return
 	log.Info().
-		Dur("list",t1.Sub(t0)).
-		Dur("set",t2.Sub(t1)).
-		Dur( "diff", t3.Sub(t2)).
+		Dur("list", t1.Sub(t0)).
+		Dur("set", t2.Sub(t1)).
+		Dur("diff", t3.Sub(t2)).
 		Msg("FS scan times")
 	return creates, deletes, updates, nil
 }

@@ -5,6 +5,9 @@ import (
 	"time"
 )
 
+const (
+	PemKeyPath = "priv_key.pem"
+)
 
 const (
 	DEFAULT_GEN_BLOCK_TIME   = 6
