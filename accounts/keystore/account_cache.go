@@ -22,7 +22,6 @@ import (
 // exist yet, the code will attempt to create a watcher at most this often.
 const minReloadInterval = 2 * time.Second
 
-
 // accountCache is a live index of all accounts in the keystore.
 type accountCache struct {
 	keydir string
@@ -115,13 +114,13 @@ func (ac *accountCache) scanAccounts() error {
 	var (
 		buf = new(bufio.Reader)
 		key struct {
-			   Address string `json:"address"`
-		   }
+				Address string `json:"address"`
+			}
 	)
 	readAccount := func(path string) *accounts.Account {
 		fd, err := os.Open(path)
 		if err != nil {
-			log.Error().Err(err).Str("path",path).Msg("Failed to open keystore file")
+			log.Error().Err(err).Str("path", path).Msg("Failed to open keystore file")
 			return nil
 		}
 		defer fd.Close()
@@ -132,7 +131,7 @@ func (ac *accountCache) scanAccounts() error {
 		addr := common.HexToAddress(key.Address)
 		switch {
 		case err != nil:
-			log.Error().Err(err).Str("path",path).Msg("Failed to decode keystore key")
+			log.Error().Err(err).Str("path", path).Msg("Failed to decode keystore key")
 		case (addr == common.Address{}):
 			log.Error().Str("path", path).Msg("Failed to decode keystore key,missing or zero address")
 		default:
@@ -164,7 +163,7 @@ func (ac *accountCache) scanAccounts() error {
 	case ac.notify <- struct{}{}:
 	default:
 	}
-	log.Info().Dur("time",end.Sub(start)).Msg("Handled keystore changes")
+	log.Info().Dur("time", end.Sub(start)).Msg("Handled keystore changes")
 	return nil
 }
 
