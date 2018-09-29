@@ -32,15 +32,15 @@ type State struct {
 	was         *WriteAheadState
 
 	mempool *MemPool
-	signer types.Signer
-	logger *zerolog.Logger
+	signer  types.Signer
+	logger  *zerolog.Logger
 }
 
 func NewState(store storage.Store) (*State, error) {
 	s := &State{
-		db:store,
-		logger:log.GetLogger("proxy_state"),
-		signer:types.NewBasicSigner(),
+		db:     store,
+		logger: log.GetLogger("proxy_state"),
+		signer: types.NewBasicSigner(),
 	}
 	if err := s.InitState(); err != nil {
 		return nil, err
@@ -150,7 +150,7 @@ func (s *State) commit() (common.Hash, error) {
 	}
 
 	// reset the write ahead state for the next block
-	// with the latest eth state
+	// with the latest para state
 	s.statedb = s.was.stateDB
 	s.logger.Info().Str("root", root.Hex()).Msg("Committed")
 	s.resetWAS()
@@ -211,7 +211,7 @@ func (s *State) InitState() error {
 	//cache wrapped state db.
 	s.statedb, err = state.New(rootHash, state.NewDatabase(s.db))
 	s.logger.Info().Str("root", rootHash.Hex()).Msg("Use root to initialise the state")
-	s.mempool = NewMemPool(rootHash,s.db)
+	s.mempool = NewMemPool(rootHash, s.db)
 	return err
 }
 
