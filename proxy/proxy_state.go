@@ -31,7 +31,7 @@ type State struct {
 	statedb     *state.StateDB
 	was         *WriteAheadState
 
-	mempool *MemPool
+	txPool   *TxPool
 	signer types.Signer
 	logger *zerolog.Logger
 }
@@ -103,7 +103,7 @@ func (s *State) applyTransaction(txBytes []byte, txIndex int, blockHash common.H
 		return err
 	}
 
-	//Prepare the ethState with transaction Hash so that it can be used in emitted
+	//Prepare the stateDB with transaction Hash so that it can be used in emitted
 	//logs
 	s.was.stateDB.Prepare(t.Hash(), blockHash, txIndex)
 
@@ -154,9 +154,24 @@ func (s *State) commit() (common.Hash, error) {
 	s.statedb = s.was.stateDB
 	s.logger.Info().Str("root", root.Hex()).Msg("Committed")
 	s.resetWAS()
-	s.mempool.Reset(root)
+	//Reset TxPool
+	if err := s.txPool.Reset(root); err != nil {
+		s.logger.Error().Err(err).Msg("Resetting TxPool")
+		return root, err
+	}
+	s.logger.Info().Msg("Reset TxPool.")
 	return root, nil
 }
+
+func (s *State) CheckTx(tx *types.Transaction) error {
+	return s.txPool.CheckTx(tx)
+}
+
+//GetPoolNonce returns an account's nonce from the txpool's ethState
+func (s *State) GetPoolNonce(addr common.Address) uint64 {
+	return s.txPool.stateDB.GetNonce(addr)
+}
+
 
 func (s *State) resetWAS() {
 	state := s.statedb.Copy()
@@ -211,7 +226,8 @@ func (s *State) InitState() error {
 	//cache wrapped state db.
 	s.statedb, err = state.New(rootHash, state.NewDatabase(s.db))
 	s.logger.Info().Str("root", rootHash.Hex()).Msg("Use root to initialise the state")
-	s.mempool = NewMemPool(rootHash,s.db)
+	s.txPool = NewTxPool(s.statedb.Copy(), s.signer, gasLimit)
+
 	return err
 }
 

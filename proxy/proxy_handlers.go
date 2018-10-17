@@ -116,6 +116,13 @@ func transactionHandler(w http.ResponseWriter, r *http.Request, m *Service) {
 		return
 	}
 	log.Info().Interface("after prepare", tx).Msg("POST tx .2 ")
+
+	if err := m.state.CheckTx(tx); err != nil {
+		log.Error().Err(err).Msg("Checking Transaction")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	data, err := rlp.EncodeToBytes(tx)
 	if err != nil {
 		log.Error().Err(err).Msg("Encoding Transaction")
@@ -177,9 +184,7 @@ func rawTransactionHandler(w http.ResponseWriter, r *http.Request, m *Service) {
 	}
 	log.Info().Bytes("raw tx bytes", rawTxBytes)
 
-	log.Info().Msg("submitting tx")
-	m.submitCh <- rawTxBytes
-	log.Info().Msg("submitted tx")
+
 
 	var t types.Transaction
 	if err := rlp.Decode(bytes.NewReader(rawTxBytes), &t); err != nil {
@@ -187,6 +192,16 @@ func rawTransactionHandler(w http.ResponseWriter, r *http.Request, m *Service) {
 		return
 	}
 	log.Info().Str("hash", t.Hash().Hex()).Msg("Decoded tx")
+
+	if err := m.state.CheckTx(&t); err != nil {
+		log.Error().Err(err).Msg("Checking Transaction")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Info().Msg("submitting tx")
+	m.submitCh <- rawTxBytes
+	log.Info().Msg("submitted tx")
 
 	res := JsonTxRes{TxHash: t.Hash().Hex()}
 	js, err := json.Marshal(res)
@@ -269,7 +284,7 @@ func prepareTransaction(args SendTxArgs, state *State, ks *keystore.KeyStore) (*
 
 	if args.Nonce == nil {
 		args.Nonce = new(uint64)
-		*args.Nonce = state.mempool.GetPendingNonce(args.From)
+		*args.Nonce = state.GetPoolNonce(args.From)
 		fmt.Printf("Mempool nonce = %d , state nonce = %d \n" , &args.Nonce, state.GetNonce(args.From))
 	}
 
