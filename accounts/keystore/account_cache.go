@@ -22,7 +22,6 @@ import (
 // exist yet, the code will attempt to create a watcher at most this often.
 const minReloadInterval = 2 * time.Second
 
-
 // accountCache is a live index of all accounts in the keystore.
 type accountCache struct {
 	keydir string
@@ -99,6 +98,13 @@ func (ac *accountCache) maybeReload() {
 	ac.scanAccounts()
 }
 
+func (ac *accountCache) hasAddress(addr common.Address) bool {
+	ac.maybeReload()
+	ac.mu.Lock()
+	defer ac.mu.Unlock()
+	return len(ac.byAddr[addr]) > 0
+}
+
 // scanAccounts checks if any changes have occurred on the filesystem, and
 // updates the account cache accordingly
 func (ac *accountCache) scanAccounts() error {
@@ -115,13 +121,13 @@ func (ac *accountCache) scanAccounts() error {
 	var (
 		buf = new(bufio.Reader)
 		key struct {
-			   Address string `json:"address"`
-		   }
+				Address string `json:"address"`
+			}
 	)
 	readAccount := func(path string) *accounts.Account {
 		fd, err := os.Open(path)
 		if err != nil {
-			log.Error().Err(err).Str("path",path).Msg("Failed to open keystore file")
+			log.Error().Err(err).Str("path", path).Msg("Failed to open keystore file")
 			return nil
 		}
 		defer fd.Close()
@@ -132,7 +138,7 @@ func (ac *accountCache) scanAccounts() error {
 		addr := common.HexToAddress(key.Address)
 		switch {
 		case err != nil:
-			log.Error().Err(err).Str("path",path).Msg("Failed to decode keystore key")
+			log.Error().Err(err).Str("path", path).Msg("Failed to decode keystore key")
 		case (addr == common.Address{}):
 			log.Error().Str("path", path).Msg("Failed to decode keystore key,missing or zero address")
 		default:
@@ -164,7 +170,7 @@ func (ac *accountCache) scanAccounts() error {
 	case ac.notify <- struct{}{}:
 	default:
 	}
-	log.Info().Dur("time",end.Sub(start)).Msg("Handled keystore changes")
+	log.Info().Dur("time", end.Sub(start)).Msg("Handled keystore changes")
 	return nil
 }
 
@@ -181,6 +187,19 @@ func (ac *accountCache) add(newAccount accounts.Account) {
 	copy(ac.all[i+1:], ac.all[i:])
 	ac.all[i] = newAccount
 	ac.byAddr[newAccount.Address] = append(ac.byAddr[newAccount.Address], newAccount)
+}
+
+// note: removed needs to be unique here (i.e. both File and Address must be set).
+func (ac *accountCache) delete(removed accounts.Account) {
+	ac.mu.Lock()
+	defer ac.mu.Unlock()
+
+	ac.all = removeAccount(ac.all, removed)
+	if ba := removeAccount(ac.byAddr[removed.Address], removed); len(ba) == 0 {
+		delete(ac.byAddr, removed.Address)
+	} else {
+		ac.byAddr[removed.Address] = ba
+	}
 }
 
 // deleteByFile removes an account referenced by the given path.

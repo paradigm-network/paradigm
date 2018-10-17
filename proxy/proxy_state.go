@@ -38,9 +38,9 @@ type State struct {
 
 func NewState(store storage.Store) (*State, error) {
 	s := &State{
-		db:store,
-		logger:log.GetLogger("proxy_state"),
-		signer:types.NewBasicSigner(),
+		db:     store,
+		logger: log.GetLogger("proxy_state"),
+		signer: types.NewBasicSigner(),
 	}
 	if err := s.InitState(); err != nil {
 		return nil, err
@@ -150,7 +150,7 @@ func (s *State) commit() (common.Hash, error) {
 	}
 
 	// reset the write ahead state for the next block
-	// with the latest eth state
+	// with the latest para state
 	s.statedb = s.was.stateDB
 	s.logger.Info().Str("root", root.Hex()).Msg("Committed")
 	s.resetWAS()
