@@ -1,46 +1,60 @@
 package proxy
 
 import (
-	"fmt"
 	"github.com/paradigm-network/paradigm/common"
 	"github.com/paradigm-network/paradigm/state"
-	"github.com/paradigm-network/paradigm/storage"
-	"sync"
+	"github.com/paradigm-network/paradigm/types"
+	"github.com/rs/zerolog/log"
+	"math/big"
 )
 
-type MemPool struct {
-	currentState *state.StateDB
-	pendingState *state.ManagedState
-	storage      storage.Store
-	cachingDB    state.Database
-	mu           sync.RWMutex
+type TxPool struct {
+	stateDB      *state.StateDB
+	signer       types.Signer
+	gasLimit     *big.Int
+	totalUsedGas *big.Int
+	gp           *GasPool
 }
 
-func NewMemPool(root common.Hash, store storage.Store) *MemPool {
-	cachingDB := state.NewDatabase(store)
-	current, _ := state.New(root,cachingDB)
-	memPool := &MemPool{
-		currentState: current,
-		pendingState: state.ManageState(current),
-		storage:store,
-		cachingDB:cachingDB,
+func NewTxPool(state *state.StateDB,
+	signer types.Signer,
+	gasLimit *big.Int) *TxPool {
+
+	return &TxPool{
+		stateDB:  state,
+		signer:   signer,
+		gasLimit: gasLimit,
 	}
-	return memPool
 }
 
-// State returns the virtual managed state of the mem pool.
-func (pool *MemPool) GetPendingNonce(address common.Address) uint64 {
-	pool.mu.RLock()
-	defer pool.mu.RUnlock()
-	nonce := pool.pendingState.GetNonce(address)
-	fmt.Printf("pending nonce = %d \n",nonce)
-	pool.pendingState.SetNonce(address, nonce+1)
-	return nonce
+func (p *TxPool) Reset(root common.Hash) error {
+
+	err := p.stateDB.Reset(root)
+	if err != nil {
+		return err
+	}
+
+	p.totalUsedGas = big.NewInt(0)
+	p.gp = new(GasPool).AddGas(p.gasLimit)
+
+	return nil
 }
 
-func (pool *MemPool) Reset(root common.Hash) {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
-	pool.currentState ,_ = state.New(root,pool.cachingDB)
-	pool.pendingState  = state.ManageState(pool.currentState)
+func (p *TxPool) CheckTx(tx *types.Transaction) error {
+
+	msg, err := tx.AsMessage(p.signer)
+	if err != nil {
+		log.Error().Err(err).Msg("Converting Transaction to Message")
+		return err
+	}
+
+	_, gas, _, err := ProcessMessage(msg,p.gp,p.stateDB)
+
+	p.totalUsedGas.Add(p.totalUsedGas, gas)
+
+	return nil
+}
+
+func (p *TxPool) GetNonce(addr common.Address) uint64 {
+	return p.stateDB.GetNonce(addr)
 }

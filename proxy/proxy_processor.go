@@ -2,8 +2,8 @@ package proxy
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/paradigm-network/paradigm/common"
+	"github.com/paradigm-network/paradigm/common/math"
 	"github.com/paradigm-network/paradigm/state"
 	"math/big"
 )
