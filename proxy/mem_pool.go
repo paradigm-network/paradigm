@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"fmt"
 	"github.com/paradigm-network/paradigm/common"
 	"github.com/paradigm-network/paradigm/state"
 	"github.com/paradigm-network/paradigm/storage"
@@ -33,7 +32,6 @@ func (pool *MemPool) GetPendingNonce(address common.Address) uint64 {
 	pool.mu.RLock()
 	defer pool.mu.RUnlock()
 	nonce := pool.pendingState.GetNonce(address)
-	fmt.Printf("pending nonce = %d \n",nonce)
 	pool.pendingState.SetNonce(address, nonce+1)
 	return nonce
 }
